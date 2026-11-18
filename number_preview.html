@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WAFA 번호 고르기</title>
+</head>
+<style>
+:root{
+  --bg:#F3F1EC; --card:#FFFFFF; --ink:#1B2430; --sub:#5E6773; --line:#E2DED5;
+  --brand:#0F6E68; --brand-ink:#FFFFFF; --gold:#B8862B; --gold-bg:#FBF1DC;
+  --s5:#6B3FD9; --s5-bg:#EEE8FD; --s4:#B8862B; --s4-bg:#FBF1DC; --s3:#3C6E91; --s3-bg:#E4EEF5;
+  --sold:#9AA0A8; --ok:#1E8A55; --warn:#B4472E; --chip:#ECE8DF;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12171C; --card:#1B2229; --ink:#ECEFF2; --sub:#A3ACB6; --line:#2C353F;
+  --brand:#37B3A8; --brand-ink:#0B1A19; --gold:#E2B35A; --gold-bg:#2E2614;
+  --s5:#B49BFF; --s5-bg:#271F3F; --s4:#E2B35A; --s4-bg:#2E2614; --s3:#8EC2E6; --s3-bg:#16283A;
+  --sold:#6B737C; --ok:#5DD39A; --warn:#F08C70; --chip:#242C35; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#12171C; --card:#1B2229; --ink:#ECEFF2; --sub:#A3ACB6; --line:#2C353F;
+  --brand:#37B3A8; --brand-ink:#0B1A19; --gold:#E2B35A; --gold-bg:#2E2614;
+  --s5:#B49BFF; --s5-bg:#271F3F; --s4:#E2B35A; --s4-bg:#2E2614; --s3:#8EC2E6; --s3-bg:#16283A;
+  --sold:#6B737C; --ok:#5DD39A; --warn:#F08C70; --chip:#242C35; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:.02em}
+.logo i{width:34px;height:34px;border-radius:10px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-style:normal;font-size:17px;font-weight:900}
+.lang{display:flex;background:var(--chip);border-radius:999px;padding:3px}
+.lang button{border:0;background:none;color:var(--sub);padding:5px 12px;border-radius:999px;font:inherit;font-size:13px;cursor:pointer}
+.lang button.on{background:var(--card);color:var(--ink);font-weight:700}
+h1{font-size:22px;margin:4px 0 0;text-wrap:balance}
+.lead{color:var(--sub);margin:0}
+.lines{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.line{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--ink);font:inherit}
+.line b{display:block;font-size:15px}.line span{font-size:12px;color:var(--sub)}
+.line.on{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 25%,transparent)}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.tabs button{flex:0 0 auto;border:0;background:var(--chip);color:var(--ink);border-radius:999px;padding:8px 13px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+.tabs button.on{background:var(--brand);color:var(--brand-ink);font-weight:700}
+.rule{font-size:13px;color:var(--sub);background:var(--card);border-radius:12px;padding:10px 12px;border:1px dashed var(--line)}
+.list{display:flex;flex-direction:column;gap:8px}
+.num{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:14px;padding:12px 14px;border:1px solid var(--line)}
+.num .no{font:700 20px/1.2 "SF Mono","Roboto Mono",ui-monospace,monospace;letter-spacing:.04em;flex:1;min-width:0}
+.num .no small{display:block;font:500 12px/1.4 inherit;font-family:inherit;color:var(--sub);letter-spacing:0;margin-top:3px}
+.badge{font-size:11px;font-weight:800;border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:2px;letter-spacing:.02em}
+.g5{background:var(--s5-bg);color:var(--s5)}.g4{background:var(--s4-bg);color:var(--s4)}.g3{background:var(--s3-bg);color:var(--s3)}
+.pick{border:0;background:var(--brand);color:var(--brand-ink);border-radius:10px;padding:9px 13px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap}
+.num.sold{opacity:.72}.num.sold .no{color:var(--sold);text-decoration:line-through;text-decoration-thickness:1px}
+.soldtag{font-size:12px;font-weight:800;color:var(--sold);border:1.5px solid var(--sold);border-radius:8px;padding:6px 9px;letter-spacing:.06em}
+.row{display:flex;gap:8px}.row input{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:11px 12px;font:600 17px ui-monospace,monospace;letter-spacing:.06em}
+.row select{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:0 8px;font:inherit}
+.ghost{border:1.5px solid var(--brand);background:none;color:var(--brand);border-radius:12px;padding:0 14px;font:inherit;font-weight:700;cursor:pointer}
+section.box{background:var(--card);border-radius:16px;padding:14px;border:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+section.box h2{font-size:16px;margin:0}
+.msg{font-size:14px;color:var(--sub);margin:0}.msg.ok{color:var(--ok)}.msg.bad{color:var(--warn)}
+.more{border:0;background:none;color:var(--brand);font:inherit;font-weight:700;cursor:pointer;padding:6px;align-self:center}
+.note{font-size:12px;color:var(--sub);text-align:center;margin:6px 0 0}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="logo"><i>W</i><span data-t="app"></span></div>
+    <div class="lang"><button data-l="ko" class="on">한국어</button><button data-l="en">English</button></div>
+  </header>
+
+  <div><h1 data-t="title"></h1><p class="lead" data-t="lead"></p></div>
+
+  <div class="lines">
+    <button class="line on" data-line="open"><b data-t="openN"></b><span data-t="openD"></span></button>
+    <button class="line" data-line="private"><b data-t="privN"></b><span data-t="privD"></span></button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="rule" id="rule"></div>
+  <div class="list" id="list"></div>
+  <button class="more" id="more" data-t="more"></button>
+
+  <section class="box">
+    <h2 data-t="myT"></h2>
+    <div class="row"><input id="my" inputmode="numeric" maxlength="12" placeholder="4829 051 318"><button class="ghost" id="myGo" data-t="find"></button></div>
+    <p class="msg" id="myMsg"></p>
+  </section>
+
+  <section class="box">
+    <h2 data-t="famT"></h2>
+    <p class="msg" data-t="famD"></p>
+    <div class="row">
+      <select id="famPos"><option value="mid" data-t="famMid"></option><option value="last" data-t="famLast"></option></select>
+      <input id="famPart" inputmode="numeric" maxlength="3" placeholder="051">
+      <select id="famCnt"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select>
+      <button class="ghost" id="famGo" data-t="find"></button>
+    </div>
+    <div class="list" id="famList"></div>
+    <p class="msg" id="famMsg"></p>
+  </section>
+
+  <p class="note" data-t="demo"></p>
+</div>
+
+<script>
+/* 서버 wafa_grade() 와 같은 규칙 (화면 시안용 — 실제 판정 · 회사 소장 · 재고는 서버가 정합니다) */
+const same = (s) => s.split('').every((c) => c === s[0]);
+const run = (s) => '0123456789'.includes(s) || '9876543210'.includes(s);
+function grade(n){
+  if (!/^[1-9]\d{9}$/.test(n)) return null;
+  const a = n.slice(0,4), b = n.slice(4,7), c = n.slice(7);
+  if (same(n.slice(1)) || same(n.slice(0,9))) return 'S';
+  if (same(b + c) || n === '1234567890' || n === '9876543210') return '5';
+  if (same(a) || (same(b) && same(c)) || b === c || run(b + c)) return '4';
+  if ((same(c) && '7890'.includes(c[0])) || run(n.slice(6)) || run(a)) return '3';
+  return 'N';
+}
+function h(s){ let x = 2166136261; for (const c of 'wafa-hold:' + s){ x ^= c.charCodeAt(0); x = Math.imul(x, 16777619); } return x >>> 0; }
+const company = (n) => { const g = grade(n); return g === 'S' || (g !== 'N' && h(n) % 10 === 0); };
+const shown = (n) => n.slice(0,4) + ' ' + n.slice(4,7) + ' ' + n.slice(7);
+const PRICE = { '5':110000, '4':55000, '3':11000, 'N':0 };
+const R = (k) => Math.floor(Math.random() * k);
+const RUN6 = ['012345','123456','234567','345678','456789','987654','876543','765432','654321','543210'];
+const RUN4 = ['0123','1234','2345','3456','4567','5678','6789','9876','8765','7654','6543','5432','4321','3210'];
+function cand(g){
+  const a = String(1000 + R(9000)), p = (k, w) => String(R(k)).padStart(w, '0');
+  if (g === '5') return a + String(R(10)).repeat(6);
+  if (g === '4'){ const i = R(4);
+    if (i === 0) return String(1 + R(9)).repeat(4) + p(1e6, 6);
+    if (i === 1){ const x = p(1000, 3); return a + x + x; }
+    if (i === 2) return a + String(R(10)).repeat(3) + String(R(10)).repeat(3);
+    return a + RUN6[R(10)]; }
+  if (g === '3'){ const i = R(3);
+    if (i === 0) return a + p(1000, 3) + '7890'[R(4)].repeat(3);
+    if (i === 1) return a + p(100, 2) + RUN4[R(14)];
+    return RUN4.slice(1, 14)[R(13)] + p(1e6, 6); }
+  return a + p(1e6, 6);
+}
+function shop(g, k){
+  const out = [], seen = new Set(); let t = 0;
+  while (out.length < k && t++ < k * 60){
+    const c = cand(g); if (seen.has(c)) continue; seen.add(c);
+    let gg = grade(c); if (gg === 'S') gg = '5'; if (gg !== g) continue;
+    const sold = company(c); if (g === 'N' && sold) continue;
+    out.push({ n:c, g:gg, sold });
+  }
+  /* 특별 번호(10자리 · 9자리 같음)는 5 Stars 목록 맨 위에 SOLD OUT 으로 늘 하나 */
+  if (g === '5'){ const d = String(1 + R(9)); out[0] = { n: d.repeat(10), g:'5', sold:true }; }
+  return out;
+}
+
+const T = {
+  ko:{ app:'와파', title:'내 번호 고르기', lead:'부름번호와 같은 4-3-3 열 자리 번호입니다. 마음에 드는 번호를 고르세요.',
+    openN:'번호 전화', openD:'Open Line · 번호로 바로 연결', privN:'별칭 전화', privD:'Private Line · 수락해야 연결',
+    tabN:'일반 번호 · 무료', tab3:'★★★ 3 Stars', tab4:'★★★★ 4 Stars', tab5:'★★★★★ 5 Stars',
+    ruleN:'구독하면 일반 번호 하나는 무료입니다. 두 번째 번호는 3,300원.',
+    rule3:'끝 3자리가 777·888·999·000이거나, 끝 4자리 또는 앞 4자리가 연속(3456 · 4321)입니다.',
+    rule4:'앞 4자리가 같은 숫자, 가운데 3자리와 끝 3자리가 같음(051 051), 둘 다 같은 숫자(333 777), 또는 뒤 6자리 연속입니다.',
+    rule5:'뒤 6자리가 모두 같은 숫자(777 777)입니다. 10자리·9자리가 같은 번호는 회사 소장입니다.',
+    pick:'고르기', free:'무료', won:'원', more:'다른 번호 더 보기',
+    myT:'생각해 둔 번호가 있으세요?', find:'찾기',
+    myOk:'고를 수 있어요', mySold:'회사 소장 번호라 판매하지 않습니다 (SOLD OUT).', myBad:'10자리 숫자로 넣어 주세요. 맨 앞은 1~9입니다.',
+    famT:'가족 번호 찾기', famD:'가족이 같은 부분을 나눠 가진 번호를 7일간 예약해 두고, 가족마다 초대 코드를 보냅니다.',
+    famMid:'가운데 3자리', famLast:'끝 3자리', famBad:'숫자 3자리로 넣어 주세요.',
+    famHold:'이 번호들을 7일간 예약하기', famDone:'예약했어요. 가족에게 초대 코드를 보내 주세요 (시안 화면).',
+    demo:'시안 화면입니다. 실제 번호 상태와 가격은 서버가 정합니다.', line:'별칭 전화는 번호 대신 별칭(부캐)을 만듭니다. 이 화면은 번호 전화용입니다.' },
+  en:{ app:'WAFA', title:'Choose your number', lead:'A 10-digit number in 4-3-3, the same as Burum numbers. Pick one you like.',
+    openN:'Open Line', openD:'Number phone · rings right away', privN:'Private Line', privD:'Alias phone · connects after accept',
+    tabN:'Standard · Free', tab3:'★★★ 3 Stars', tab4:'★★★★ 4 Stars', tab5:'★★★★★ 5 Stars',
+    ruleN:'One standard number is free with your plan. A second number is ₩3,300.',
+    rule3:'Ends in 777 · 888 · 999 · 000, or the first or last 4 digits run in order (3456 · 4321).',
+    rule4:'First 4 digits repeat, middle 3 equals last 3 (051 051), both repeat (333 777), or the last 6 run in order.',
+    rule5:'The last 6 digits are all the same (777 777). Numbers with 9 or 10 identical digits are held by WAFA.',
+    pick:'Choose', free:'Free', won:'', more:'Show more numbers',
+    myT:'Have a number in mind?', find:'Search',
+    myOk:'Available', mySold:'Held by WAFA — not for sale (SOLD OUT).', myBad:'Enter 10 digits. The first digit is 1–9.',
+    famT:'Family numbers', famD:'Hold numbers that share a part for 7 days, then send each family member an invite code.',
+    famMid:'Middle 3', famLast:'Last 3', famBad:'Enter 3 digits.',
+    famHold:'Hold these numbers for 7 days', famDone:'Held. Send the invite codes to your family (mock-up).',
+    demo:'Mock-up. Real availability and prices come from the server.', line:'Private Line uses aliases instead of a number. This screen is for Open Line.' }
+};
+let L = 'ko', G = 'N';
+try { const s = localStorage.getItem('wafa_lang'); if (s === 'en' || s === 'ko') L = s; } catch (e) {}
+const $ = (id) => document.getElementById(id);
+const money = (g) => g === 'N' ? T[L].free : (L === 'en' ? '₩' + PRICE[g].toLocaleString('en-US') : PRICE[g].toLocaleString('ko-KR') + T[L].won);
+const badge = (g) => g === 'N' ? '' : '<span class="badge g' + g + '">' + '★'.repeat(+g) + '</span>';
+
+function paint(){
+  document.documentElement.lang = L;
+  document.querySelectorAll('[data-t]').forEach((e) => { e.textContent = T[L][e.dataset.t]; });
+  document.querySelectorAll('.lang button').forEach((b) => b.classList.toggle('on', b.dataset.l === L));
+  $('tabs').innerHTML = [['N','tabN'],['3','tab3'],['4','tab4'],['5','tab5']]
+    .map(([g,k]) => '<button data-g="' + g + '"' + (g === G ? ' class="on"' : '') + '>' + T[L][k] + '</button>').join('');
+  $('rule').textContent = T[L]['rule' + G];
+}
+function row(x){
+  return '<div class="num' + (x.sold ? ' sold' : '') + '"><div class="no">' + shown(x.n) + badge(x.g) +
+    '<small>' + money(x.g) + '</small></div>' +
+    (x.sold ? '<span class="soldtag">SOLD OUT</span>' : '<button class="pick">' + T[L].pick + '</button>') + '</div>';
+}
+function load(add){ const items = shop(G, 8); $('list').innerHTML = (add ? $('list').innerHTML : '') + items.map(row).join(''); }
+
+document.querySelector('.lang').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; L = b.dataset.l;
+  try { localStorage.setItem('wafa_lang', L); } catch (err) {} paint(); load(false); $('myMsg').textContent = ''; $('famList').innerHTML = ''; $('famMsg').textContent = ''; };
+$('tabs').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; G = b.dataset.g; paint(); load(false); };
+$('more').onclick = () => load(true);
+document.querySelector('.lines').onclick = (e) => { const b = e.target.closest('.line'); if (!b) return;
+  document.querySelectorAll('.line').forEach((x) => x.classList.toggle('on', x === b));
+  $('rule').textContent = b.dataset.line === 'private' ? T[L].line : T[L]['rule' + G]; };
+$('myGo').onclick = () => {
+  const n = $('my').value.replace(/\D/g,''), m = $('myMsg'); let g = grade(n);
+  if (!g){ m.className = 'msg bad'; m.textContent = T[L].myBad; return; }
+  if (company(n)){ m.className = 'msg bad'; m.innerHTML = shown(n) + ' ' + badge(g === 'S' ? '5' : g) + ' — ' + T[L].mySold; return; }
+  m.className = 'msg ok'; m.innerHTML = shown(n) + ' ' + badge(g) + ' — ' + T[L].myOk + ' · ' + money(g);
+};
+$('famGo').onclick = () => {
+  const pos = $('famPos').value, p = $('famPart').value.replace(/\D/g,''), k = +$('famCnt').value, msg = $('famMsg');
+  if (p.length !== 3){ msg.className = 'msg bad'; msg.textContent = T[L].famBad; $('famList').innerHTML = ''; return; }
+  const out = [], seen = new Set(); let t = 0;
+  while (out.length < k && t++ < 400){
+    const f = String(1000 + R(9000)), x = String(R(1000)).padStart(3,'0'), c = pos === 'mid' ? f + p + x : f + x + p;
+    if (seen.has(c)) continue; seen.add(c); const g = grade(c); if (g === 'S' || company(c)) continue; out.push({ n:c, g, sold:false });
+  }
+  $('famList').innerHTML = out.map((x) => '<div class="num"><div class="no">' + shown(x.n) + badge(x.g) + '<small>' + money(x.g) + '</small></div></div>').join('') +
+    '<button class="pick" id="famHold" style="align-self:stretch;padding:12px">' + T[L].famHold + '</button>';
+  msg.textContent = '';
+  $('famHold').onclick = () => { msg.className = 'msg ok'; msg.textContent = T[L].famDone; };
+};
+paint(); load(false);
+</script>
+
+</html>

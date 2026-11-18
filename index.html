@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>와파 WAFA - 와이파이로 걸고 받는 비상폰</title>
+<meta name="description" content="전화번호 없이도, 유심 없이도. 와이파이만 있으면 걸고 받는 비상폰 와파 WAFA. 번호 전화(Open Line)와 별칭 전화(Private Line), 한국어 · English.">
+<meta property="og:title" content="와파 WAFA - Wi-Fi Phone for Everyone">
+<meta property="og:description" content="와이파이만 있으면 걸고 받는 비상폰. 공기계도 유심 없이 다시 쓰는 폰으로.">
+<meta name="theme-color" content="#0F6E68">
+<style>
+:root{--bg:#F3F1EC;--card:#fff;--ink:#1B2430;--sub:#5E6773;--line:#E2DED5;--brand:#0F6E68;--brand-ink:#fff;--soft:#E3F1EF}
+@media (prefers-color-scheme:dark){:root{--bg:#12171C;--card:#1B2229;--ink:#ECEFF2;--sub:#A3ACB6;--line:#2C353F;--brand:#37B3A8;--brand-ink:#0B1A19;--soft:#173331;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:24px max(18px,env(safe-area-inset-left)) 56px max(18px,env(safe-area-inset-right))}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;letter-spacing:.04em}
+.logo i{width:40px;height:40px;border-radius:12px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-style:normal;font-size:20px}
+.lang{display:flex;background:var(--line);border-radius:999px;padding:3px}
+.lang button{border:0;background:none;color:var(--sub);padding:6px 13px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer}
+.lang button.on{background:var(--card);color:var(--ink);font-weight:700}
+.hero{padding:44px 0 28px}
+.hero h1{font-size:clamp(28px,6vw,40px);line-height:1.25;margin:0 0 14px;text-wrap:balance}
+.hero p{color:var(--sub);margin:0;font-size:17px;max-width:34em}
+.badge{display:inline-block;background:var(--soft);color:var(--brand);font-weight:800;font-size:13px;border-radius:999px;padding:5px 12px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:8px 0 28px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.card b{display:block;font-size:16px;margin-bottom:4px}.card span{color:var(--sub);font-size:14px}
+h2{font-size:20px;margin:28px 0 10px}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;font-size:15px}
+td,th{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--sub);font-weight:600;font-size:13px}
+.note{color:var(--sub);font-size:13px;margin-top:10px}
+footer{margin-top:40px;color:var(--sub);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
+footer a{color:var(--sub)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"><i>W</i>WAFA</div>
+    <div class="lang"><button data-l="ko" class="on">한국어</button><button data-l="en">English</button></div>
+  </header>
+
+  <section class="hero">
+    <span class="badge" data-t="soon"></span>
+    <h1 data-t="h1"></h1>
+    <p data-t="lead"></p>
+  </section>
+
+  <div class="grid">
+    <div class="card"><b data-t="f1"></b><span data-t="f1d"></span></div>
+    <div class="card"><b data-t="f2"></b><span data-t="f2d"></span></div>
+    <div class="card"><b data-t="f3"></b><span data-t="f3d"></span></div>
+    <div class="card"><b data-t="f4"></b><span data-t="f4d"></span></div>
+  </div>
+
+  <h2 data-t="linesT"></h2>
+  <div class="grid">
+    <div class="card"><b data-t="open"></b><span data-t="openD"></span></div>
+    <div class="card"><b data-t="priv"></b><span data-t="privD"></span></div>
+  </div>
+
+  <h2 data-t="priceT"></h2>
+  <table>
+    <tr><th data-t="plan"></th><th data-t="price"></th></tr>
+    <tr><td data-t="m1"></td><td>₩1,500</td></tr>
+    <tr><td data-t="m3"></td><td>₩3,300</td></tr>
+    <tr><td data-t="m6"></td><td>₩5,500</td></tr>
+    <tr><td data-t="m12"></td><td>₩9,900</td></tr>
+  </table>
+  <p class="note" data-t="priceN"></p>
+
+  <footer>
+    <div data-t="emerg"></div>
+    <div style="margin-top:8px">© 2026 위브앱솔루션 · WeaveApp Solution</div>
+  </footer>
+</div>
+<script>
+const T = {
+  ko: { soon:'곧 출시', h1:'와이파이만 있으면 걸고 받는 비상폰, 와파',
+    lead:'내 휴대폰 회선이 안 될 때도, 서랍 속 공기계에서도. 와이파이나 이웃의 핫스팟만 있으면 와파 번호로 문자 · 음성 · 영상 통화를 이어 갑니다. 세계 어디서든 로밍 없이.',
+    f1:'📵 유심 없어도', f1d:'통신사 가입 없는 공기계를 가족 비상폰으로 다시 씁니다.',
+    f2:'🌏 로밍 없이 해외 통화', f2d:'같은 앱끼리라면 세계 어디서나 그대로 걸고 받습니다.',
+    f3:'📞 진짜 전화기처럼', f3d:'통화 중 대기 · 음성 사서함 · 착신 전환 · 3자 통화까지.',
+    f4:'💬 문자는 끊기지 않게', f4d:'구독이 끝나도 문자 보내기 · 받기와 전화 받기는 계속 무료입니다.',
+    linesT:'두 가지 전화', open:'번호 전화 · Open Line', openD:'4-3-3 열 자리 번호로 바로 연결. 어르신 · 가족 · 일상 연락에.',
+    priv:'별칭 전화 · Private Line', privD:'상대가 수락해야 연결되는 별칭(부캐) 전화. 모임 · 거래 · 일에.',
+    priceT:'요금 (자동결제, 언제든 해지)', plan:'요금제', price:'가격', m1:'1개월', m3:'3개월', m6:'6개월', m12:'12개월',
+    priceN:'달마다 음성 300분 · 영상 100분 · 보관 1GB, 문자는 무제한. 남은 음성 · 영상 분은 다음 달 한정으로 이월됩니다.',
+    emerg:'와파로는 112 · 119 같은 긴급전화를 걸 수 없습니다. 긴급번호를 누르면 휴대폰 기본 전화로 연결됩니다.' },
+  en: { soon:'Coming soon', h1:'WAFA — the backup phone that works on Wi-Fi',
+    lead:'When your mobile line is down, or on an old phone in a drawer. With Wi-Fi or a neighbor’s hotspot, keep texting, calling and video calling with your WAFA number. Anywhere in the world, no roaming.',
+    f1:'📵 No SIM needed', f1d:'Turn an old phone without a carrier plan into a family backup phone.',
+    f2:'🌏 Abroad without roaming', f2d:'Call and answer app-to-app from anywhere in the world.',
+    f3:'📞 A real phone', f3d:'Call waiting, voicemail, call forwarding and three-way calls.',
+    f4:'💬 Texts never stop', f4d:'Even after your plan ends, texting and answering calls stay free.',
+    linesT:'Two ways to call', open:'Open Line', openD:'A 10-digit number in 4-3-3 that rings right away. Great for parents, family and everyday calls.',
+    priv:'Private Line', privD:'Alias calls that connect only after the other side accepts. For groups, deals and work.',
+    priceT:'Plans (auto-renew, cancel anytime)', plan:'Plan', price:'Price', m1:'1 month', m3:'3 months', m6:'6 months', m12:'12 months',
+    priceN:'Each month: 300 voice minutes, 100 video minutes, 1 GB storage, unlimited texts. Unused minutes carry over to the next month only.',
+    emerg:'WAFA cannot place emergency calls such as 112 or 119. Dialing an emergency number hands off to your phone’s own dialer.' }
+};
+let L = (navigator.language || 'ko').startsWith('ko') ? 'ko' : 'en';
+try { const s = localStorage.getItem('wafa_lang'); if (s === 'ko' || s === 'en') L = s; } catch (e) {}
+function paint(){
+  document.documentElement.lang = L;
+  document.querySelectorAll('[data-t]').forEach((e) => { e.textContent = T[L][e.dataset.t]; });
+  document.querySelectorAll('.lang button').forEach((b) => b.classList.toggle('on', b.dataset.l === L));
+  document.title = L === 'ko' ? '와파 WAFA - 와이파이로 걸고 받는 비상폰' : 'WAFA - Wi-Fi Phone for Everyone';
+}
+document.querySelector('.lang').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; L = b.dataset.l; try { localStorage.setItem('wafa_lang', L); } catch (err) {} paint(); };
+paint();
+</script>
+</body>
+</html>
