@@ -145,8 +145,14 @@
   WF.native = function(){ return window.AliasNative || null; };
   WF.subscribe = function(plan){
     var n = WF.native();
-    if (n && typeof n.storeSubscribe === 'function') { n.storeSubscribe('wafa_plan', plan.base); return true; }
-    WF.toast(WF.t('webOnly')); return false;
+    if (!(n && typeof n.storeSubscribe === 'function')) { WF.toast(WF.t('webOnly')); return false; }
+    /* 🔴 세 번째 값 = 로그인한 사람 id → 구글이 obfuscatedAccountId 로 영수증에 적어 둡니다(서버가 누구 구독인지 확인) */
+    AL.sb.auth.getSession().then(function(r){
+      var uid = r && r.data && r.data.session && r.data.session.user && r.data.session.user.id;
+      if (!uid) { WF.toast(WF.t('err')); return; }
+      n.storeSubscribe('wafa_plan', plan.base, uid);
+    });
+    return true;
   };
   WF.buy = function(sku){
     var n = WF.native();
