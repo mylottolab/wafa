@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>와파 WAFA</title>
+<meta name="theme-color" content="#0F6E68">
+<link rel="stylesheet" href="wafa.css?v=20261119">
+<script src="alias_config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="alias_common.js?v=20261119"></script>
+<script src="wafa.js?v=20261119"></script>
+</head>
+<body>
+<!-- 와파 홈 (앱을 열면 처음 보이는 화면)
+     · 로그인 전: 소개 + [가입 · 로그인]
+     · 처음 로그인: "주로 어떻게 쓰실까요?" — 번호 전화 / 별칭 전화 중 메인 고르기
+     · 그 다음: 메인이 위에 크게, 나머지 타일 -->
+<div class="wf">
+  <div class="wf-top"></div>
+  <div id="view"></div>
+</div>
+<script>
+(async function(){
+  WF.header(null, null);
+  var V = document.getElementById('view');
+  var sess = (await AL.sb.auth.getSession()).data.session;
+  if (!sess) {
+    V.innerHTML = '<div class="card"><h2 data-w="welcomeT"></h2><p class="muted" data-w="welcomeD"></p>' +
+      '<button class="btn" id="go" data-w="login"></button><p class="muted" data-w="textFree"></p></div>';
+    WF.paint(V);
+    document.getElementById('go').onclick = function(){ location.href = 'alias_auth.html?next=wafa_start.html'; };
+    return;
+  }
+  var me;
+  try { me = await WF.me(); } catch (e) { V.innerHTML = '<p class="msg bad">' + WF.t('err') + '</p>'; return; }
+
+  if (!me.setup) {
+    V.innerHTML = '<div class="card"><h2 data-w="setupT"></h2><p class="muted" data-w="setupD"></p>' +
+      '<div class="pick2"><button data-m="open"><b data-w="openN"></b><span data-w="openD"></span></button>' +
+      '<button data-m="private"><b data-w="privN"></b><span data-w="privD"></span></button></div></div>';
+    WF.paint(V);
+    V.querySelectorAll('[data-m]').forEach(function(b){ b.onclick = async function(){
+      b.disabled = true;
+      await WF.rpc('wafa_set_prefs', { p_main: b.dataset.m, p_lang: WF.en ? 'en' : 'ko' });
+      location.reload();
+    }; });
+    return;
+  }
+
+  var main = (me.prefs && me.prefs.main) || 'open';
+  var num = (me.numbers || [])[0];
+  var numCard = '<div class="card"><p class="muted">' + WF.t('myNumber') + '</p>' +
+    (num ? '<div class="big">' + WF.shown(num.number) + WF.badge(num.grade) + '</div>'
+         : '<div style="font-weight:800">' + WF.t('noNumber') + '</div><button class="btn small" id="getNum">' + WF.t('getNumber') + '</button>') +
+    '<p class="muted">' + WF.esc(WF.subLine(me)) + '</p></div>';
+
+  var openTile = '<a class="tile' + (main === 'open' ? ' main' : '') + '" href="wafa_number.html"><span class="ic">📞</span><b>' + WF.t('openN').replace('📞 ', '') +
+                 (main === 'open' ? ' · ' + WF.t('mainTag') : '') + '</b><span>' + WF.t('numbersD') + '</span></a>';
+  var privTile = '<a class="tile' + (main === 'private' ? ' main' : '') + '" href="alias_contacts.html"><span class="ic">💬</span><b>' + WF.t('privN').replace('💬 ', '') +
+                 (main === 'private' ? ' · ' + WF.t('mainTag') : '') + '</b><span>' + WF.t('contactsD') + '</span></a>';
+  var tiles = (main === 'open' ? openTile + privTile : privTile + openTile) +
+    '<div class="tile off"><span class="ic">☎️</span><b>' + WF.t('dialN').replace('☎️ ', '') + '</b><span>' + WF.t('dialD') + '</span></div>' +
+    '<a class="tile" href="wafa_plan.html"><span class="ic">💳</span><b>' + WF.t('planN').replace('💳 ', '') + '</b><span>' + WF.t('planD') + '</span></a>' +
+    '<a class="tile" href="wafa_usage.html"><span class="ic">📊</span><b>' + WF.t('usageN').replace('📊 ', '') + '</b><span>' + WF.t('usageD') + '</span></a>' +
+    '<button class="tile" id="sw"><span class="ic">🔁</span><b>' + WF.t('switchMain') + '</b><span>' + (main === 'open' ? WF.t('privN') : WF.t('openN')) + '</span></button>';
+
+  V.innerHTML = numCard + '<div class="tiles" style="margin-top:14px">' + tiles + '</div>';
+  var g = document.getElementById('getNum'); if (g) g.onclick = function(){ location.href = 'wafa_number.html'; };
+  document.getElementById('sw').onclick = async function(){
+    await WF.rpc('wafa_set_prefs', { p_main: main === 'open' ? 'private' : 'open' }); location.reload();
+  };
+})();
+</script>
+</body>
+</html>

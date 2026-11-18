@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>부름</title>
+<link rel="stylesheet" href="alias_common.css?v=20260927a">
+<link rel="stylesheet" href="alias_theme.css?v=20261021d">
+<script src="alias_config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="alias_common.js?v=20261114a"></script>
+<script>
+/* ⚠ alias_common.js 를 못 읽으면 화면이 텅 빕니다. 글씨를 채우는 것이
+   그 파일이기 때문입니다. 빈 화면만 보면 원인을 알 수가 없어서,
+   여기서 잡아 사람 말로 알려줍니다.
+   가장 흔한 원인은 anon 열쇠 줄이 두 줄로 나뉜 것입니다. */
+document.addEventListener("DOMContentLoaded", function(){
+  if (typeof AL === "undefined" || typeof AL.t !== "function") {
+    document.body.innerHTML =
+      '<div style="padding:26px;font-family:system-ui,sans-serif;line-height:1.8;' +
+      'color:#DDE5F0;background:#0E1621;min-height:100vh">' +
+      '<b style="font-size:17px">alias_common.js 를 못 읽었습니다.</b><br><br>' +
+      '가장 흔한 원인은 anon 열쇠 줄이 두 줄로 나뉜 것입니다.<br>' +
+      'alias_common.js 20번 줄이 한 줄인지 확인하세요.<br><br>' +
+      '<span style="color:#7E8FA6">F12 → Console 에 진짜 원인이 찍힙니다.</span></div>';
+    return;
+  }
+  AL.bootTheme();
+});
+</script>
+</head>
+<body class="tabbed" data-t-title="kpTitle">
+<div class="wrap">
+
+  <div class="tophead" style="margin-bottom:10px"><a class="backlink" href="alias_me.html" data-t="navMe"></a><span class="gohome"><a href="alias_contacts.html" data-t="goHome"></a><a href="alias_me.html" data-t="goMe"></a></span></div>
+
+  <div class="tophead">
+    <h1 class="h2" data-t="kpTitle"></h1>
+  </div>
+  <p class="lede" data-t="kpNote"></p>
+
+  <div class="field">
+    <textarea id="note" rows="3" data-t-ph="kpPlace"></textarea>
+  </div>
+  <button class="btn" id="add" data-t="kpAdd"></button>
+
+  <div id="list" style="margin-top:22px"></div>
+  <div id="err" class="err"></div>
+
+</div>
+
+<nav class="tabbar">
+  <a href="alias_contacts.html" data-t="navContacts"></a>
+  <a href="alias_calls.html" data-t="navCalls"></a>
+  <a href="alias_me.html" class="on" data-t="navMe"></a>
+</nav>
+
+<script>
+/* =====================================================================
+   내 메모함 (Keep)
+   나만 보는 곳입니다. 링크에 딸리지 않습니다.
+   대화에서 [메모함에 담기] 로 옮겨온 것도 여기 모입니다.
+   ===================================================================== */
+
+let rows = [];
+
+function showErr(msg){
+  const el = document.getElementById('err');
+  el.textContent = msg; el.classList.add('show');
+}
+
+function paint(){
+  const box = document.getElementById('list');
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty">' + AL.esc(AL.t('kpEmpty')) + '</div>';
+    return;
+  }
+  box.innerHTML = rows.map(function(r){
+    return '<div class="keep-row">' +
+      '<div class="kt">' + AL.esc(r.content || '') + '</div>' +
+      '<div class="kd">' +
+        '<span>' + AL.esc(AL.fmtDateTime(r.created_at)) + '</span>' +
+        '<button data-del="' + AL.esc(r.id) + '">' + AL.esc(AL.t('kpDelete')) + '</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  box.querySelectorAll('[data-del]').forEach(function(b){
+    b.addEventListener('click', function(){ del(b.getAttribute('data-del')); });
+  });
+}
+
+async function reload(){
+  try {
+    const res = await AL.sb.from('keeps')
+      .select('id, content, media_path, media_name, created_at')
+      .order('created_at', { ascending: false }).limit(300);
+    if (res.error) throw res.error;
+    rows = res.data || [];
+    paint();
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+async function add(){
+  const t = document.getElementById('note').value.trim();
+  if (!t) return;
+  const btn = document.getElementById('add');
+  btn.disabled = true;
+  try {
+    const sess = await AL.sb.auth.getSession();
+    const res = await AL.sb.from('keeps')
+      .insert({ account_id: sess.data.session.user.id, content: t });
+    if (res.error) throw res.error;
+    document.getElementById('note').value = '';
+    await reload();
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function del(id){
+  try {
+    const res = await AL.sb.from('keeps').delete().eq('id', id);
+    if (res.error) throw res.error;
+    await reload();
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+document.getElementById('add').addEventListener('click', add);
+
+(async function(){
+  AL.paintText();
+  /* 🔴 2026-09-18 — 폰의 ◁ 를 누르면 앱이 나가지 않고 돌아갑니다. */
+  AL.setBack('alias_me.html');
+  if (!await AL.requireLogin()) return;
+  await reload();
+  AL.startAlerts();
+})();
+</script>
+</body>
+</html>

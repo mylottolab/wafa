@@ -1,0 +1,82 @@
+/* 와파 WAFA — 와파 화면 공통 모양 (2026-11-19) */
+:root{
+  --bg:#F3F1EC; --card:#FFFFFF; --ink:#1B2430; --sub:#5E6773; --line:#E2DED5; --chip:#ECE8DF;
+  --brand:#0F6E68; --brand-ink:#FFFFFF; --soft:#E3F1EF;
+  --s5:#6B3FD9; --s5-bg:#EEE8FD; --s4:#B8862B; --s4-bg:#FBF1DC; --s3:#3C6E91; --s3-bg:#E4EEF5;
+  --sold:#9AA0A8; --ok:#1E8A55; --warn:#B4472E; --bar:#0F6E68; --bar2:#7DB8B2; --bar3:#C9A24A;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12171C; --card:#1B2229; --ink:#ECEFF2; --sub:#A3ACB6; --line:#2C353F; --chip:#242C35;
+  --brand:#37B3A8; --brand-ink:#0B1A19; --soft:#173331;
+  --s5:#B49BFF; --s5-bg:#271F3F; --s4:#E2B35A; --s4-bg:#2E2614; --s3:#8EC2E6; --s3-bg:#16283A;
+  --sold:#6B737C; --ok:#5DD39A; --warn:#F08C70; --bar:#37B3A8; --bar2:#2E6F69; --bar3:#9C7C35; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#12171C; --card:#1B2229; --ink:#ECEFF2; --sub:#A3ACB6; --line:#2C353F; --chip:#242C35;
+  --brand:#37B3A8; --brand-ink:#0B1A19; --soft:#173331;
+  --s5:#B49BFF; --s5-bg:#271F3F; --s4:#E2B35A; --s4-bg:#2E2614; --s3:#8EC2E6; --s3-bg:#16283A;
+  --sold:#6B737C; --ok:#5DD39A; --warn:#F08C70; --bar:#37B3A8; --bar2:#2E6F69; --bar3:#9C7C35; color-scheme:dark }
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 "Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;word-break:keep-all}
+.wf{max-width:520px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.wf-top{display:flex;align-items:center;gap:10px;min-height:44px}
+.wf-back{border:0;background:var(--chip);color:var(--ink);border-radius:999px;height:40px;padding:0 14px;font:inherit;font-weight:700;cursor:pointer}
+.wf-logo{display:flex;align-items:center;gap:9px;font-weight:900;font-size:19px;letter-spacing:.04em}
+.wf-logo i{width:36px;height:36px;border-radius:11px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-style:normal;font-size:18px}
+.wf-title{font-size:19px;font-weight:900;margin:0}
+.wf-sp{flex:1}
+.wf-lang{display:flex;background:var(--chip);border-radius:999px;padding:3px}
+.wf-lang button{border:0;background:none;color:var(--sub);padding:6px 11px;border-radius:999px;font:inherit;font-size:13px;cursor:pointer}
+.wf-lang button.on{background:var(--card);color:var(--ink);font-weight:800}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card h2{font-size:17px;margin:0}
+.muted{color:var(--sub);font-size:14px;margin:0}
+.big{font:800 28px/1.2 "SF Mono","Roboto Mono",ui-monospace,monospace;letter-spacing:.04em}
+.btn{border:0;background:var(--brand);color:var(--brand-ink);border-radius:14px;min-height:50px;padding:0 16px;font:inherit;font-weight:800;font-size:16px;cursor:pointer;width:100%}
+.btn.ghost{background:none;color:var(--brand);border:1.5px solid var(--brand)}
+.btn.small{min-height:40px;width:auto;font-size:14px;border-radius:11px}
+.btn:disabled{opacity:.5;cursor:default}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 14px;text-align:left;color:var(--ink);font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-height:112px;text-decoration:none}
+.tile b{font-size:16px}.tile span{font-size:13px;color:var(--sub)}
+.tile .ic{font-size:26px}
+.tile.main{grid-column:1/-1;border:2px solid var(--brand);background:var(--soft)}
+.tile.off{opacity:.55}
+.pick2{display:grid;gap:10px}
+.pick2 button{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:18px 16px;text-align:left;font:inherit;color:var(--ink);cursor:pointer}
+.pick2 button b{display:block;font-size:18px}.pick2 button span{font-size:14px;color:var(--sub)}
+.tabs{display:flex;gap:6px;overflow-x:auto}
+.tabs button{flex:0 0 auto;border:0;background:var(--chip);color:var(--ink);border-radius:999px;padding:8px 13px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+.tabs button.on{background:var(--brand);color:var(--brand-ink);font-weight:800}
+.num{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:14px;padding:12px 14px;border:1px solid var(--line)}
+.num .no{font:700 19px/1.2 "SF Mono","Roboto Mono",ui-monospace,monospace;letter-spacing:.03em;flex:1;min-width:0}
+.num .no small{display:block;font:500 12px/1.4 system-ui,sans-serif;color:var(--sub);letter-spacing:0;margin-top:3px}
+.num.sold{opacity:.7}.num.sold .no{color:var(--sold);text-decoration:line-through}
+.soldtag{font-size:12px;font-weight:800;color:var(--sold);border:1.5px solid var(--sold);border-radius:8px;padding:6px 9px;letter-spacing:.06em}
+.badge{font-size:11px;font-weight:800;border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:2px}
+.g5{background:var(--s5-bg);color:var(--s5)}.g4{background:var(--s4-bg);color:var(--s4)}.g3{background:var(--s3-bg);color:var(--s3)}
+.row{display:flex;gap:8px;align-items:center}
+.row input,.row select{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:11px 12px;font:600 16px system-ui,sans-serif;min-width:0}
+.row input{flex:1;letter-spacing:.05em}
+.msg{font-size:14px;margin:0;color:var(--sub)}.msg.ok{color:var(--ok)}.msg.bad{color:var(--warn)}
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.plan{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px;text-align:left;font:inherit;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.plan b{font-size:16px}.plan .p{font-size:20px;font-weight:900}.plan span{font-size:12px;color:var(--sub)}
+.plan.on{border-color:var(--brand);background:var(--soft)}
+.meter{display:flex;flex-direction:column;gap:6px}
+.meter .lbl{display:flex;justify-content:space-between;font-size:14px}
+.meter .bar{height:12px;border-radius:999px;background:var(--chip);overflow:hidden;display:flex}
+.meter .bar i{display:block;height:100%}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--sub)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.step{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)}
+.step:last-child{border-bottom:0}
+.step .ct{display:flex;align-items:center;gap:6px}
+.step .ct button{width:38px;height:38px;border-radius:10px;border:0;background:var(--chip);color:var(--ink);font:800 18px system-ui;cursor:pointer}
+.step .ct b{min-width:28px;text-align:center}
+table.hist{width:100%;border-collapse:collapse;font-size:14px}
+table.hist td,table.hist th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}
+table.hist td:first-child,table.hist th:first-child{text-align:left}
+table.hist th{color:var(--sub);font-weight:600;font-size:12px}
+.code{font:800 18px ui-monospace,monospace;letter-spacing:.12em;background:var(--chip);border-radius:10px;padding:6px 10px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:99;max-width:90vw}

@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>부름</title>
+<link rel="stylesheet" href="alias_common.css?v=20260927a">
+<link rel="stylesheet" href="alias_theme.css?v=20261021d">
+<script src="alias_qrlib.js"></script>
+<script src="alias_config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="alias_common.js?v=20261114a"></script>
+<script src="alias_qr.js?v=20261019a"></script>
+<script>
+/* ⚠ alias_common.js 를 못 읽으면 화면이 텅 빕니다. 글씨를 채우는 것이
+   그 파일이기 때문입니다. 빈 화면만 보면 원인을 알 수가 없어서,
+   여기서 잡아 사람 말로 알려줍니다.
+   가장 흔한 원인은 anon 열쇠 줄이 두 줄로 나뉜 것입니다. */
+document.addEventListener("DOMContentLoaded", function(){
+  if (typeof AL === "undefined" || typeof AL.t !== "function") {
+    document.body.innerHTML =
+      '<div style="padding:26px;font-family:system-ui,sans-serif;line-height:1.8;' +
+      'color:#DDE5F0;background:#0E1621;min-height:100vh">' +
+      '<b style="font-size:17px">alias_common.js 를 못 읽었습니다.</b><br><br>' +
+      '가장 흔한 원인은 anon 열쇠 줄이 두 줄로 나뉜 것입니다.<br>' +
+      'alias_common.js 20번 줄이 한 줄인지 확인하세요.<br><br>' +
+      '<span style="color:#7E8FA6">F12 → Console 에 진짜 원인이 찍힙니다.</span></div>';
+    return;
+  }
+  AL.bootTheme();
+});
+</script>
+<style>
+/* =====================================================================
+   🔴 2026-09-15 — 초대장 인쇄 · 미리보기
+
+   ⚠ 종이 모양(.card/.sq/.big)은 **화면과 인쇄에 같은 규칙**을 씁니다.
+     전에는 @media print 안에만 넣어서, 폰에서 뭐가 찍히는지 볼 수가
+     없었습니다. 이제 화면에서 A4 그대로 미리 봅니다.
+
+   ⚠ mm 단위는 화면에서도 씁니다. 210mm 가 화면에서 약 794px 입니다.
+     좁은 폰에서는 scale 로 줄여 보여줍니다.
+   ===================================================================== */
+#prBg{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6)}
+#prBox{display:none;position:fixed;z-index:81;left:50%;top:50%;
+  transform:translate(-50%,-50%);width:min(400px,90vw);max-height:84vh;overflow:auto;
+  padding:22px;border-radius:18px;background:#1B2430;color:#DDE5F0;
+  border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 44px rgba(0,0,0,.6)}
+#prBox h3{margin:0 0 6px;font-size:18px;font-weight:800}
+#prBox .cap{margin:0 0 10px;font-size:13.5px;opacity:.72;line-height:1.55}
+#prBox .warn{margin:0 0 16px;padding:11px 14px;border-radius:11px;font-size:13px;
+  line-height:1.65;background:rgba(242,201,76,.15);color:#F2C94C}
+#prBox .opt{display:flex;align-items:center;gap:12px;width:100%;cursor:pointer;
+  margin:0 0 10px;padding:14px 15px;border-radius:14px;text-align:left;
+  background:rgba(255,255,255,.05);color:inherit;
+  border:1.5px solid rgba(255,255,255,.13)}
+#prBox .opt.on{background:rgba(143,227,176,.14);border-color:rgba(143,227,176,.55)}
+#prBox .opt .dot{width:18px;height:18px;flex:0 0 18px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.3)}
+#prBox .opt.on .dot{border-color:#8FE3B0;background:#8FE3B0;
+  box-shadow:inset 0 0 0 4px #1B2430}
+#prBox .opt .t{font-size:15.5px;font-weight:700}
+#prBox .opt .d{font-size:12.5px;opacity:.68;margin-top:2px}
+#prBox .hint{margin:4px 0 16px;font-size:12.5px;line-height:1.7;opacity:.66}
+#prBox .fb{display:flex;gap:10px}
+#prBox .fb button{flex:1;margin:0;padding:14px 0;border-radius:12px;font-size:15px;
+  font-weight:700;cursor:pointer;background:rgba(255,255,255,.08);color:inherit;
+  border:1px solid rgba(255,255,255,.18)}
+#prBox .fb button.go{background:rgba(143,227,176,.22);color:#8FE3B0;
+  border-color:rgba(143,227,176,.45)}
+
+/* ── 미리보기 ───────────────────────────────────────────────── */
+#prPvBg{display:none;position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.82)}
+#prPvBar{display:none;position:fixed;z-index:92;left:0;right:0;bottom:0;
+  padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));
+  background:#1B2430;border-top:1px solid rgba(255,255,255,.14);
+  display:none;gap:10px}
+#prPvBar.on{display:flex}
+#prPvBar button{flex:1;margin:0;padding:15px 0;border-radius:12px;font-size:15px;
+  font-weight:800;cursor:pointer;background:rgba(255,255,255,.08);color:#DDE5F0;
+  border:1px solid rgba(255,255,255,.18)}
+#prPvBar button.go{background:rgba(143,227,176,.22);color:#8FE3B0;
+  border-color:rgba(143,227,176,.45)}
+#prPvTip{display:none;position:fixed;z-index:92;left:0;right:0;top:0;
+  padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;
+  font-size:12.5px;line-height:1.6;text-align:center;
+  background:rgba(27,36,48,.95);color:#94A3B8}
+
+/* ── 종이 ────────────────────────────────────────────────────
+   화면에서는 숨어 있다가, 미리보기나 인쇄 때만 나타납니다. */
+#prSheet{display:none;background:#fff;color:#000;
+  font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
+
+#prSheet.show{display:block;position:fixed;z-index:91;
+  left:50%;top:calc(50% - 16px);width:190mm;min-height:277mm;padding:0;
+  transform:translate(-50%,-50%) scale(var(--prz,1));
+  transform-origin:center center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.2), 0 18px 50px rgba(0,0,0,.5)}
+
+/* A4 한 장 가득 — 가게 문·게시판용 */
+#prSheet.big .card{width:100%;height:265mm;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;box-sizing:border-box}
+#prSheet.big .qr{width:105mm}
+#prSheet.big .ttl{font-size:26pt;font-weight:800;margin-bottom:6mm}
+#prSheet.big .code{font-size:22pt;letter-spacing:.12em}
+#prSheet.big .cap{font-size:11pt}
+#prSheet.big .face{font-size:13pt}
+#prSheet.big .scan{font-size:13pt}
+#prSheet.big .tel{font-size:11pt}
+
+/* 명함 90×50mm · 2열 4행 = 8장
+   🔴 2026-09-15 — 가위질할 자리를 주려고 간격을 8mm 로 넓히고
+     한 줄을 덜어냈습니다. 빽빽하면 자르다 옆 것을 버립니다. */
+#prSheet.card{display:grid;
+  grid-template-columns:repeat(2, 90mm);
+  grid-auto-rows:50mm; gap:8mm; justify-content:center;
+  padding:6mm 0}
+#prSheet.card .card{display:flex;flex-direction:row;align-items:center;gap:3mm;
+  padding:3mm;box-sizing:border-box;text-align:left;
+  border:0.3mm dashed #999;break-inside:avoid;overflow:hidden}
+#prSheet.card .qr{width:38mm !important;height:38mm !important;flex:0 0 38mm}
+#prSheet.card .side{flex:1;min-width:0}
+#prSheet.card .ttl{font-size:9pt;font-weight:800;margin:0 0 1.5mm;line-height:1.25}
+#prSheet.card .scan{font-size:6pt;margin:0 0 1.5mm;font-weight:600;color:#444}
+#prSheet.card .code{font-size:11pt;margin:0;letter-spacing:.08em}
+#prSheet.card .cap{font-size:5.5pt;margin:.3mm 0 0;color:#666}
+#prSheet.card .face{font-size:6.5pt;margin:2mm 0 0;line-height:1.35;font-weight:700}
+#prSheet.card .tel{font-size:5.5pt;margin:.8mm 0 0;color:#666}
+
+/* 정사각 60×60mm · 3열 3행 = 9장 */
+#prSheet.sq{display:grid;
+  grid-template-columns:repeat(3, 56mm);
+  grid-auto-rows:56mm; gap:8mm; justify-content:center;
+  padding:6mm 0}
+#prSheet.sq .card{display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:3mm;box-sizing:border-box;
+  border:0.3mm dashed #999;break-inside:avoid;overflow:hidden}
+#prSheet.sq .qr{width:30mm !important;height:30mm !important}
+#prSheet.sq .ttl{font-size:6.5pt;font-weight:800;margin:0 0 1mm;line-height:1.2}
+#prSheet.sq .scan{font-size:5pt;margin:1mm 0 0;color:#444}
+#prSheet.sq .code{font-size:8pt;margin:.8mm 0 0;letter-spacing:.06em}
+#prSheet.sq .cap{display:none}
+#prSheet.sq .face{font-size:5.5pt;margin:1.2mm 0 0;line-height:1.3;font-weight:700}
+#prSheet.sq .tel{display:none}
+
+/* 🔴🔴 2026-09-15 — QR 을 만드는 함수가 칸 크기를 **직접 박아넣습니다**.
+   그 값이 제가 정한 크기를 덮어써서, QR 이 명함보다 커지고 글씨가
+   그 위에 겹쳐 찍혔습니다.
+   ⚠ 그래서 !important 로 눌러야 합니다. 여기를 빼지 마세요. */
+#prSheet .qr{overflow:hidden}
+#prSheet .qr > *{width:100% !important;height:100% !important;
+  max-width:100% !important;max-height:100% !important;display:block !important}
+#prSheet .qr img, #prSheet .qr canvas{width:100% !important;height:100% !important;
+  display:block !important}
+
+#prSheet .ttl{word-break:keep-all}
+#prSheet .scan{font-weight:700}
+#prSheet .code{font-family:ui-monospace,monospace;font-weight:800}
+#prSheet .face{word-break:keep-all}
+
+@media print{
+  html, body{margin:0 !important;padding:0 !important;height:auto !important;
+    background:#fff !important}
+  body > *:not(#prSheet){display:none !important}
+  /* 미리보기로 띄운 상태 그대로 인쇄해도 되게, 화면용 배치를 되돌립니다. */
+  #prSheet, #prSheet.show{display:block !important;position:static !important;
+    transform:none !important;width:auto !important;min-height:0 !important;
+    box-shadow:none !important;margin:0 !important}
+  #prSheet.card, #prSheet.sq{display:grid !important;padding:0 !important}
+  @page{size:A4;margin:10mm}
+}
+</style>
+</head>
+<body data-t-title="ttInvite">
+<div class="wrap">
+
+  <div class="tophead" style="margin-bottom:10px"><a class="backlink" href="alias_contacts.html" data-t="dtlBack"></a><span class="gohome"><a href="alias_contacts.html" data-t="goHome"></a><a href="alias_me.html" data-t="goMe"></a></span></div>
+  <div class="top">
+    <h1 class="h2" data-t="invTitle"></h1>
+  </div>
+  <p class="lede" data-t="invIntro"></p>
+
+  <!-- 🔴 2026-10-29 친구 초대 보상: 새로 가입한 친구가 첫 결제하면 둘 다 +1개월 (1_burum_invite_reward.sql) -->
+  <div id="rewardBox" style="display:none;margin:4px 0 16px;padding:14px 16px;border-radius:16px;background:rgba(232,180,74,.12);border:1px solid rgba(232,180,74,.4);line-height:1.6">
+    <b id="rwT" style="display:block;font-size:15px;color:#F2C36B"></b>
+    <span id="rwD" style="font-size:13px;opacity:.85"></span>
+    <div id="rwS" style="font-size:12.5px;margin-top:6px;opacity:.85"></div>
+  </div>
+
+  <!-- 만들기 -->
+  <div id="formPart">
+    <div class="field">
+      <label for="face" data-t="invFaceLbl"></label>
+      <button type="button" class="btn ghost" id="face" style="margin-top:0;text-align:left"></button>
+      <input type="hidden" id="faceId">
+      <p class="hint" id="facePreview"></p>
+    </div>
+
+    <div class="field">
+      <label for="memo" data-t="invMemoLbl"></label>
+      <input id="memo" type="text" maxlength="60" autocomplete="off">
+      <p class="hint" data-t="invMemoHint"></p>
+    </div>
+
+    <div class="field">
+      <label for="uses" data-t="invUsesLbl"></label>
+      <select id="uses">
+        <option value="1" data-t="invUses1"></option>
+        <option value="10" data-t="invUses10"></option>
+        <option value="50" data-t="invUses50"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="exp" data-t="invExpLbl"></label>
+      <select id="exp">
+        <option value="7" data-t="invExp7d"></option>
+        <option value="1" data-t="invExp1d"></option>
+        <option value="30" data-t="invExp30d"></option>
+        <option value="0" data-t="invExpNever"></option>
+      </select>
+    </div>
+
+    <button class="btn" id="make" data-t="invMake"></button>
+    <div id="err" class="err"></div>
+  </div>
+
+  <!-- 만든 뒤 -->
+  <div id="madePart" class="step">
+    <h2 class="h2" data-t="invMadeTtl"></h2>
+    <!-- ⚠ 이 제품에서 가장 중요한 정보입니다. 이 초대를 쓰면 상대가 나를
+         누구로 보는가. 안 보여주면 어떤 얼굴로 나갔는지 아무도 모릅니다. -->
+    <div class="ok show" id="whoWill"></div>
+    <div class="paper">
+      <div class="cap" data-t="invCodeCap"></div>
+      <div class="code small" id="codeOut"></div>
+    </div>
+    <!-- 🔴 마주 보고 있으면 QR 이 가장 안전합니다. 어디로도 안 나갑니다. -->
+    <div class="qr-box" id="qrBox"></div>
+    <p class="qr-note" data-t="qrNote"></p>
+
+    <div class="copybar">
+      <button id="copyCode" data-t="copy"></button>
+      <button id="copyLink" data-t="invCopyLink"></button>
+      <button id="shareBtn" data-t="invShareSys"></button>
+    </div>
+    <p class="note" data-t="invShareNote"></p>
+    <!-- 🔴 2026-09-15 신설 — 종이로 뽑기 -->
+    <button class="btn ghost" id="printBtn" data-t="prBtn"></button>
+    <button class="btn ghost" id="again" data-t="invMake"></button>
+  </div>
+
+  <!-- 내가 만든 초대 -->
+  <div class="sect" data-t="invMineTtl"></div>
+  <ul class="list" id="mine"></ul>
+
+</div>
+
+<!-- 🔴 2026-09-15 — 인쇄 고르는 창 -->
+<div id="prBg"></div>
+<div id="prBox"></div>
+
+<!-- 미리보기 -->
+<div id="prPvBg"></div>
+<div id="prPvTip"></div>
+<div id="prPvBar">
+  <button id="prPvBack"></button>
+  <button id="prPvGo" class="go"></button>
+</div>
+
+<!-- 🔴🔴 인쇄할 때만 보이는 A4 종이
+     ⚠ body 의 **직계 자식**이어야 합니다. 인쇄 CSS 가
+       "body > *:not(#prSheet)" 로 나머지를 숨기는 방식이라,
+       .wrap 안에 넣으면 같이 숨겨집니다.
+     (Aliascall 의 printSheet 와 같은 방식입니다) -->
+<div id="prSheet"></div>
+
+<script>
+/* =====================================================================
+   초대 보내기 — invites 표
+   ⚠ 초대는 소모품입니다. max_uses 만큼 쓰이면 더는 안 됩니다.
+     전화번호처럼 영구히 떠다니는 주소가 아닙니다.
+   ===================================================================== */
+
+let me = null;
+let aliases = [];
+let lastCode = null;
+let myInvites = [];   // 🔴 2026-09-15
+
+function showErr(msg){
+  const el = document.getElementById('err');
+  el.textContent = msg; el.classList.add('show');
+}
+function clearErr(){ document.getElementById('err').classList.remove('show'); }
+
+/* ── 별칭 고르는 칸 ─────────────────────────────────────────────── */
+/* 고른 별칭을 화면에 씁니다. 고르개는 공용(AL.pickAlias)을 씁니다 —
+   목록에 없으면 그 자리에서 만들 수 있어 화면을 떠날 일이 없습니다. */
+let chosen = null;
+
+function paintFaces(){
+  if (!chosen) chosen = aliases.filter(function(a){ return a.is_default; })[0] || aliases[0] || null;
+  document.getElementById('face').textContent = chosen ? chosen.display_name : AL.t('pkNew');
+  document.getElementById('faceId').value = chosen ? chosen.id : '';
+  paintPreview();
+}
+
+/* ── 내가 만든 초대 목록 ────────────────────────────────────────── */
+async function reloadMine(){
+  const ul = document.getElementById('mine');
+  try {
+    // 초대와, 그 초대로 실제로 생긴 링크 수를 함께 읽습니다.
+    // links.via_invite_id 를 세는 것이 곧 "몇 명이 썼나" 입니다.
+    const res = await AL.sb.from('invites')
+      .select('id, code, memo, max_uses, expires_at, revoked_at, created_at, issuer_persona_id, persona:personas!invites_issuer_persona_id_fkey(display_name)')
+      .order('created_at', { ascending: false });
+    if (res.error) throw res.error;
+
+    const invites = res.data || [];
+    myInvites = invites;   // 🔴 2026-09-15 — 바로 인쇄하러 올 때 쓰려고 남겨둡니다
+    if (!invites.length) {
+      ul.innerHTML = '<li class="empty">' + AL.esc(AL.t('invMineNone')) + '</li>';
+      return;
+    }
+
+    // 쓰인 횟수를 한 번에 세어옵니다.
+    const ids = invites.map(function(i){ return i.id; });
+    const linkRes = await AL.sb.from('links').select('via_invite_id').in('via_invite_id', ids);
+    const used = {};
+    (linkRes.data || []).forEach(function(l){
+      used[l.via_invite_id] = (used[l.via_invite_id] || 0) + 1;
+    });
+
+    ul.innerHTML = invites.map(function(i){
+      const n = used[i.id] || 0;
+      /* 🔴 2026-09-15 — 왜 못 쓰는지 알려줍니다.
+         전에는 단추만 사라져서 "날짜가 남았는데 왜 안 되지?" 했습니다.
+         대개는 **쓰임 횟수를 다 채운 것**입니다. */
+      const outOfUses = n >= i.max_uses;
+      const past = !!(i.expires_at && new Date(i.expires_at) <= new Date());
+      const dead = !!i.revoked_at || past || outOfUses;
+      const why = i.revoked_at ? AL.t('invRevoked')
+                : (outOfUses ? AL.t('invDead')
+                : (past ? AL.t('invExpired') : ''));
+      const when = i.expires_at ? AL.t('invExpiredAt', { when: AL.fmtDate(i.expires_at) }) : AL.t('invNoExpiry');
+      return '<li class="row' + (dead ? ' dim' : '') + '">' +
+        '<div class="row-main">' +
+          '<span class="row-name code small">' + AL.esc(i.code) + '</span>' +
+          (why ? '<span class="badge">' + AL.esc(why) + '</span>' : '') +
+        '</div>' +
+        '<div class="row-sub">' +
+          (i.memo ? AL.esc(i.memo) + '<br>' : '') +
+          AL.esc(i.persona ? i.persona.display_name : '') + ' · ' +
+          AL.esc(AL.t('invUsedOf', { used: n, max: i.max_uses })) + ' · ' + AL.esc(when) +
+        '</div>' +
+        (dead ? '' :
+          '<div class="row-acts">' +
+            '<button data-rev="' + AL.esc(i.id) + '">' + AL.esc(AL.t('invRevoke')) + '</button>' +
+            /* 🔴 2026-09-19 — 코드만이 아니라 **링크째로** 보냅니다.
+               받는 분이 옮겨 적을 필요가 없습니다. */
+            '<button data-sh="' + AL.esc(i.code) + '">' +
+              AL.esc(AL.t('invShareSys')) + '</button>' +
+            '<button data-cp="' + AL.esc(i.code) + '">' + AL.esc(AL.t('copy')) + '</button>' +
+            /* 🔴 2026-09-15 — 이미 만든 초대를 그 별칭 그대로 다시 뽑습니다. */
+            '<button data-pr="' + AL.esc(i.code) + '" data-prf="' +
+              AL.esc(i.persona ? i.persona.display_name : '') + '">' +
+              AL.esc(AL.t('prRow')) + '</button>' +
+          '</div>') +
+      '</li>';
+    }).join('');
+
+    ul.querySelectorAll('[data-rev]').forEach(function(b){
+      b.addEventListener('click', function(){ revoke(b.getAttribute('data-rev')); });
+    });
+    ul.querySelectorAll('[data-cp]').forEach(function(b){
+      b.addEventListener('click', function(){ AL.copyText(b.getAttribute('data-cp'), b); });
+    });
+    ul.querySelectorAll('[data-sh]').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var url = AL.inviteUrl(b.getAttribute('data-sh'));
+        var how = await AL.shareText(url, { title: AL.t('invShareSys'), btn: b });
+        if (how === 'copy') {
+          alert(AL.t('invCopied') + (AL._shareWhy ? '\n\n(' + AL._shareWhy + ')' : ''));
+        }
+      });
+    });
+    ul.querySelectorAll('[data-pr]').forEach(function(b){
+      b.addEventListener('click', function(){
+        openPrint(b.getAttribute('data-pr'), b.getAttribute('data-prf'));
+      });
+    });
+
+  } catch (e) {
+    console.error(e);
+    ul.innerHTML = '<li class="empty">' + AL.esc(AL.t('errGeneric', { msg: e.message || String(e) })) + '</li>';
+  }
+}
+
+async function revoke(id){
+  if (!confirm(AL.t('invRevokeAsk'))) return;
+  const res = await AL.sb.from('invites').update({ revoked_at: new Date().toISOString() }).eq('id', id);
+  if (res.error) { showErr(AL.t('errGeneric', { msg: res.error.message })); return; }
+  await reloadMine();
+}
+
+/* 🔴 2026-09-15 — 아직 쓸 수 있는 초대인가.
+   목록에서도 쓰고, "바로 인쇄" 에서도 씁니다. 판단이 한 곳에 있어야
+   목록에는 되는데 인쇄는 안 되는 일이 안 생깁니다. */
+function inviteAlive(i, usedCount){
+  if (i.revoked_at) return false;
+  if (i.expires_at && new Date(i.expires_at) <= new Date()) return false;
+  if ((usedCount || 0) >= i.max_uses) return false;
+  return true;
+}
+
+/* ── 만들기 ─────────────────────────────────────────────────────── */
+async function makeInvite(){
+  clearErr();
+  /* 🔴 2026-09-14 — 새 초대는 이용권이 필요합니다.
+     이미 이어진 사이는 그대로 유지됩니다. */
+  if (!await AL.requirePlan()) return;
+  if (!aliases.length) { showErr(AL.t('errNoAlias')); return; }
+
+  const personaId = document.getElementById('faceId').value;
+  const memo = document.getElementById('memo').value.trim();
+  const maxUses = parseInt(document.getElementById('uses').value, 10);
+  const days = parseInt(document.getElementById('exp').value, 10);
+
+  let expiresAt = null;
+  if (days > 0) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    expiresAt = d.toISOString();
+  }
+
+  const btn = document.getElementById('make');
+  btn.disabled = true;
+  try {
+    // code 는 표의 default 가 만들어줍니다. 돌려받아야 화면에 보여줄 수 있습니다.
+    const res = await AL.sb.from('invites').insert({
+      issuer_account_id: me.id,
+      issuer_persona_id: personaId,
+      memo: memo || null,
+      max_uses: maxUses,
+      expires_at: expiresAt,
+    }).select('code').single();
+    if (res.error) throw res.error;
+
+    lastCode = res.data.code;
+    document.getElementById('codeOut').textContent = lastCode;
+
+    // 어떤 얼굴로 나가는지 반드시 보여줍니다. 고른 것과 다르면 여기서 알아챕니다.
+    document.getElementById('whoWill').textContent =
+      AL.t('invWillSee', { face: chosen ? chosen.display_name : '?' });
+
+    // QR 을 그립니다. 주소를 담아야 상대가 바로 열 수 있습니다.
+    try {
+      await AL.drawQr(document.getElementById('qrBox'), AL.inviteUrl(lastCode), 220);
+    } catch (e) {
+      // ⚠ 조용히 숨기면 왜 안 되는지 아무도 모릅니다. 말을 하게 합니다.
+      console.error('[qr] 못 그렸습니다', e);
+      const qb = document.getElementById('qrBox');
+      qb.style.background = 'transparent';
+      qb.innerHTML = '';
+      const w = document.createElement('div');
+      w.className = 'pk-err';
+      w.style.margin = '0';
+      w.textContent = AL.t('qrFailed');
+      qb.appendChild(w);
+    }
+    document.getElementById('formPart').style.display = 'none';
+    document.getElementById('madePart').classList.add('on');
+    document.getElementById('memo').value = '';
+    await reloadMine();
+
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function paintPreview(){
+  document.getElementById('facePreview').textContent =
+    chosen ? AL.t('invWillSee', { face: chosen.display_name }) : '';
+}
+document.getElementById('face').addEventListener('click', async function(){
+  const picked = await AL.pickAlias({ currentId: chosen ? chosen.id : null });
+  if (!picked) return;
+  chosen = picked;
+  if (!aliases.some(function(a){ return a.id === picked.id; })) aliases.push(picked);
+  document.getElementById('make').disabled = false;
+  clearErr();
+  paintFaces();
+});
+document.getElementById('make').addEventListener('click', makeInvite);
+document.getElementById('copyCode').addEventListener('click', function(){
+  AL.copyText(lastCode || '', this);
+});
+document.getElementById('copyLink').addEventListener('click', function(){
+  AL.copyText(AL.inviteUrl(lastCode || ''), this);
+});
+document.getElementById('shareBtn').addEventListener('click', async function(){
+  // ⚠ 여기서 다른 앱을 거치면 그 앱에 내 번호가 남습니다.
+  //   그래서 위 QR 을 먼저 권합니다. 이건 멀리 있을 때의 차선책입니다.
+  /* 🔴 2026-09-19 — 앱에서는 자바 창구로 보냅니다.
+     웹 공유는 앱 화면에서 안 됩니다(함정 98·119). */
+  const url = AL.inviteUrl(lastCode || '');
+  const how = await AL.shareText(url, { title: AL.t('invShareSys'), btn: this });
+  /* 🔴 2026-09-19 — 무슨 일이 일어났는지 늘 말해줍니다.
+     조용히 복사만 하면 손님은 단추가 고장난 줄 압니다(함정 76). */
+  if (how === 'copy') {
+    showOk(AL.t('invCopied') + (AL._shareWhy ? '\n(' + AL._shareWhy + ')' : ''));
+  }
+});
+
+/* =====================================================================
+   🔴🔴 2026-09-15 신설 — 초대장 인쇄 · PDF
+
+   중고거래 게시판, 가게 문, 명함처럼 나눠주기 위한 것입니다.
+
+   ⚠ 브라우저의 인쇄 기능을 씁니다. PDF 를 직접 만들지 않습니다.
+     한글 글꼴을 PDF 안에 넣으려면 큰 파일을 받아야 하는데,
+     인쇄 창의 "PDF 로 저장" 이 그 일을 공짜로 해줍니다.
+
+   ⚠ 종이에는 **어떤 얼굴로 나가는지**를 반드시 적습니다.
+     여기저기 붙여두면 어떤 별칭으로 만든 초대인지 잊어버립니다.
+     이 제품에서 가장 중요한 정보입니다.
+
+   ⚠ 한 번만 쓸 수 있는 초대(max_uses = 1)를 종이로 뽑으면
+     첫 사람만 들어오고 나머지는 헛걸음합니다. 미리 알려드립니다.
+   ===================================================================== */
+/* 크기표 — Aliascall 과 같은 값을 씁니다.
+   한 회사 물건이니 손님이 느끼는 크기 감각이 같아야 합니다.
+   ⚠ A4(210×297) 에서 여백 10mm 를 빼면 190×277 입니다. 거기에
+     3mm 간격으로 몇 장이 들어가는지 세어 둔 값입니다. */
+const PR_SIZES = [
+  /* 🔴 2026-09-15 — 가위질할 자리를 주려고 한 줄씩 덜어냈습니다.
+     빽빽하면 자르다 옆 것을 버립니다. 간격은 8mm 입니다. */
+  { key: 'card', n: 8, label: '9×5cm', desc: 'prDCard', cls: 'card', qr: 420 },
+  { key: 'sq',   n: 9, label: '5.6×5.6cm', desc: 'prDSq', cls: 'sq', qr: 360 },
+];
+
+/* ⚠ 얼굴 안내("상대는 저를 ○○로 봅니다")는 **어느 크기에도 반드시**
+   들어갑니다. 그래서 그것이 안 들어갈 만큼 작은 크기는 아예 두지
+   않았습니다. 넣을 수 없으면 뽑지 않는 편이 낫습니다. */
+
+let prMode = 'card';      // 명함 크기를 기본으로 둡니다
+let prCode = null;        // 어느 초대를 뽑는가
+let prFace = '';          // 그 초대의 별칭
+
+function prSheetShow(on){
+  document.getElementById('prBg').style.display = on ? 'block' : 'none';
+  document.getElementById('prBox').style.display = on ? 'block' : 'none';
+}
+document.getElementById('prBg').addEventListener('click', function(){ prSheetShow(false); });
+
+function prPaint(){
+  const opts = PR_SIZES.map(function(z){
+    return [z.key, AL.t('prSize', { s: z.label, n: z.n }), AL.t(z.desc)];
+  }).concat([['big', AL.t('prBig'), AL.t('prBigD')]]);
+  /* 한 번만 쓰는 초대면 미리 알립니다. */
+  const uses = parseInt(document.getElementById('uses').value, 10) || 1;
+
+  document.getElementById('prBox').innerHTML =
+    '<h3>' + AL.esc(AL.t('prTitle')) + '</h3>' +
+    '<p class="cap">' + AL.esc(AL.t('prFace', { face: prFace })) + '</p>' +
+    '<p class="cap">' + AL.esc(AL.t('prPick')) + '</p>' +
+    (uses <= 1 ? '<div class="warn">' + AL.esc(AL.t('prOnce')) + '</div>' : '') +
+    /* 🔴 2026-09-15 — 종이는 통제가 안 됩니다. 반드시 알려드립니다.
+       사진 한 장 찍히면 단톡방으로 퍼집니다. 쓰임 횟수가 열이면
+       낯선 아홉 명이 들어옵니다. */
+    '<div class="warn">' + AL.esc(AL.t('prPaperWarn')) + '</div>' +
+    opts.map(function(o){
+      return '<button class="opt' + (prMode === o[0] ? ' on' : '') + '" data-pm="' + o[0] + '">' +
+        '<span class="dot"></span>' +
+        '<span><span class="t">' + AL.esc(o[1]) + '</span>' +
+        '<span class="d">' + AL.esc(o[2]) + '</span></span>' +
+      '</button>';
+    }).join('') +
+    '<p class="hint">' + AL.esc(AL.t('prHint')) + '</p>' +
+    '<div class="fb">' +
+      '<button id="prNo">' + AL.esc(AL.t('close')) + '</button>' +
+      '<button id="prYes" class="go">' + AL.esc(AL.t('prPrev')) + '</button>' +
+    '</div>';
+
+  document.querySelectorAll('#prBox [data-pm]').forEach(function(b){
+    b.addEventListener('click', function(){ prMode = b.getAttribute('data-pm'); prPaint(); });
+  });
+  document.getElementById('prNo').addEventListener('click', function(){ prSheetShow(false); });
+  document.getElementById('prYes').addEventListener('click', doPrint);
+}
+
+/* 종이 한 칸을 만듭니다. */
+function prCardEl(){
+  const d = document.createElement('div');
+  d.className = 'card';
+  const txt =
+    '<div class="ttl">' + AL.esc(AL.t('hlTitle')) + '</div>' +
+    '<div class="scan">' + AL.esc(AL.t('prScan')) + '</div>' +
+    '<div class="code">' + AL.esc(prCode || '') + '</div>' +
+    '<div class="cap">' + AL.esc(AL.t('prCodeCap')) + '</div>' +
+    '<div class="face">' + AL.esc(AL.t('prFace', { face: prFace })) + '</div>' +
+    '<div class="tel">' + AL.esc(AL.t('prNoTel')) + '</div>';
+
+  if (prMode === 'card') {
+    /* 명함은 가로로 길어서 QR 을 왼쪽, 글씨를 오른쪽에 둡니다. */
+    d.innerHTML = '<div class="qr"></div><div class="side">' + txt + '</div>';
+  } else {
+    d.innerHTML = '<div class="ttl">' + AL.esc(AL.t('hlTitle')) + '</div>' +
+      '<div class="qr"></div>' +
+      '<div class="scan">' + AL.esc(AL.t('prScan')) + '</div>' +
+      '<div class="code">' + AL.esc(prCode || '') + '</div>' +
+      '<div class="face">' + AL.esc(AL.t('prFace', { face: prFace })) + '</div>' +
+      '<div class="tel">' + AL.esc(AL.t('prNoTel')) + '</div>';
+  }
+  return d;
+}
+
+async function doPrint(){
+  if (!prCode) return;
+  const sheet = document.getElementById('prSheet');
+  sheet.innerHTML = '';
+
+  let n, size;
+  if (prMode === 'big') {
+    sheet.className = 'big';
+    n = 1; size = 600;
+  } else {
+    const z = PR_SIZES.filter(function(x){ return x.key === prMode; })[0] || PR_SIZES[0];
+    sheet.className = z.cls;
+    n = z.n;
+    /* ⚠ QR 그림은 실제 인쇄 크기보다 넉넉히 그립니다.
+       작게 그리면 종이에서 뭉개져 폰이 못 읽습니다. */
+    size = z.qr;
+  }
+  const url = AL.inviteUrl(prCode);
+
+  const boxes = [];
+  for (let i = 0; i < n; i++) {
+    const c = prCardEl();
+    sheet.appendChild(c);
+    boxes.push(c.querySelector('.qr'));
+  }
+
+  /* ⚠ QR 을 다 그린 뒤에 인쇄해야 합니다. 먼저 인쇄하면 빈 네모가 찍힙니다. */
+  try {
+    for (const b of boxes) await AL.drawQr(b, url, size);
+  } catch (e) {
+    console.error('[print] QR 을 못 그렸습니다', e);
+    showErr(AL.t('qrFailed'));
+    return;
+  }
+
+  prSheetShow(false);
+  showPreview();          // 🔴 2026-09-15 — 바로 인쇄하지 않고 먼저 보여드립니다
+}
+
+/* =====================================================================
+   🔴🔴 2026-09-15 신설 — 미리보기
+
+   왜 필요한가
+     폰에서 [인쇄] 를 누르면 무엇이 찍히는지 알 수가 없었습니다.
+     인쇄 창이 곧바로 떠서, 종이에 어떻게 놓이는지 못 보고 결정해야
+     했습니다. 잘못 뽑으면 종이와 잉크를 버립니다.
+
+   어떻게
+     같은 종이(#prSheet)를 화면에 그대로 띄웁니다. 별도 그림이 아니라
+     **인쇄될 바로 그것**입니다. 그래야 보이는 대로 찍힙니다.
+     좁은 화면에서는 줄여서 보여줍니다(scale).
+   ===================================================================== */
+function showPreview(){
+  const sheet = document.getElementById('prSheet');
+  sheet.classList.add('show');
+
+  /* 190mm 가 화면에서 몇 px 인지 재서, 화면에 맞게 줄입니다. */
+  const mm = 96 / 25.4;                      // 1mm 가 몇 px 인가
+  const wantW = 190 * mm;
+  const wantH = sheet.scrollHeight || (277 * mm);
+  const okW = window.innerWidth - 24;
+  const okH = window.innerHeight - 150;      // 위 안내와 아래 단추 자리
+  const z = Math.min(1, okW / wantW, okH / wantH);
+  sheet.style.setProperty('--prz', String(z));
+
+  document.getElementById('prPvBg').style.display = 'block';
+  document.getElementById('prPvTip').style.display = 'block';
+  document.getElementById('prPvTip').textContent =
+    (IN_APP && !appCanPrint())
+      ? (AL.t('prPvTip') + ' ' + AL.t('prNoApp1'))
+      : (AL.t('prPvTip') + ' ' + AL.t('prPdfTip'));
+  document.getElementById('prPvBar').classList.add('on');
+}
+
+function hidePreview(){
+  document.getElementById('prSheet').classList.remove('show');
+  document.getElementById('prPvBg').style.display = 'none';
+  document.getElementById('prPvTip').style.display = 'none';
+  document.getElementById('prPvBar').classList.remove('on');
+}
+
+document.getElementById('prPvBack').addEventListener('click', function(){
+  hidePreview();
+  prPaint();
+  prSheetShow(true);
+});
+/* 🔴🔴 2026-09-15 — 안드로이드 앱 화면(웹뷰)은 인쇄를 못 합니다.
+
+   window.print() 를 불러도 **아무 일도 안 일어납니다.** 오류도 안 납니다.
+   안드로이드 웹뷰가 그 기능을 아예 안 갖고 있기 때문입니다.
+   브라우저(삼성 인터넷·크롬)와 PC 에서는 멀쩡히 됩니다.
+
+   ⚠ 조용히 아무 일도 안 하는 것이 제일 나쁩니다. 손님은 단추가
+     고장난 줄 압니다. 그래서 미리 갈라 말씀드립니다(함정 76).
+
+   ⚠ 앱에서도 되게 하려면 자바에 인쇄 창구를 내야 합니다(PrintManager).
+     APK 를 다시 만들어야 하는 일이라 나중에 합니다. */
+const IN_APP = !!(window.AliasNative ||
+  (window.Capacitor && window.Capacitor.isNativePlatform &&
+   window.Capacitor.isNativePlatform()));
+
+/* 🔴🔴 2026-09-15 — 앱에서도 인쇄가 됩니다 (자바 창구)
+
+   안드로이드에는 인쇄 기능이 이미 들어 있습니다(PrintManager).
+   웹뷰를 통째로 넘기면 알아서 A4 로 나눠줍니다. @media print 규칙도
+   그대로 적용되고, 인쇄 창에 "PDF 로 저장" 도 들어 있습니다.
+
+   ⚠ 옛 APK 에는 이 창구가 없습니다. **있는지부터 확인**하고,
+     없으면 예전처럼 브라우저로 안내합니다. 새 APK 를 안 깐 손님도
+     있을 테니까요. */
+/* 🔴 2026-09-15 — 저장될 파일 이름.
+
+   ⚠ **폴더는 우리가 못 정합니다.** 안드로이드의 PDF 저장 기능이
+     어디에 넣을지 정하고, 손님이 저장 화면에서 고릅니다. 지금 "0" 폴더에
+     들어가는 것도 그쪽이 정한 것입니다.
+
+   ⚠ 우리가 정할 수 있는 건 **파일 이름 하나**입니다. 그래서 이름에
+     별칭과 날짜를 넣습니다. 여러 장 뽑아도 뭐가 뭔지 알 수 있게요.
+
+   ⚠ 앱 이름이 정해지면 APP_NAME 만 바꾸면 됩니다.
+     (매니페스트 android:label · alias_common.js 의 phTitle 과 함께) */
+const APP_NAME = '부름';
+
+function printName(){
+  const d = new Date();
+  const ymd = d.getFullYear() +
+    String(d.getMonth() + 1).padStart(2, '0') +
+    String(d.getDate()).padStart(2, '0');
+  /* 파일 이름에 못 쓰는 글자를 걸러냅니다. */
+  const face = String(prFace || '').replace(/[\\/:*?"<>|]/g, '').trim();
+  return APP_NAME + '_초대장' + (face ? '_' + face : '') + '_' + ymd;
+}
+
+function appCanPrint(){
+  try {
+    return !!(window.AliasNative &&
+              typeof AliasNative.printPage === 'function' &&
+              (typeof AliasNative.canPrint !== 'function' || AliasNative.canPrint()));
+  } catch (e) { return false; }
+}
+
+document.getElementById('prPvGo').addEventListener('click', function(){
+  if (IN_APP) {
+    if (appCanPrint()) {
+      try {
+        AliasNative.printPage(printName());
+        return;
+      } catch (e) {
+        console.error('[print] 자바 창구 실패', e);
+      }
+    }
+    tellNoPrint();
+    return;
+  }
+  /* ⚠ 미리보기를 켠 채로 인쇄합니다. 인쇄용 규칙이 화면용 배치를
+     되돌리므로 그대로 A4 에 놓입니다. */
+  window.print();
+});
+
+function tellNoPrint(){
+  const url = location.origin + location.pathname;
+  hidePreview();
+  document.getElementById('prBox').innerHTML =
+    '<h3>' + AL.esc(AL.t('prNoApp')) + '</h3>' +
+    '<p class="cap">' + AL.esc(AL.t('prNoApp1')) + '</p>' +
+    '<p class="cap">' + AL.esc(AL.t('prNoApp2')) + '</p>' +
+    '<div class="warn" style="word-break:break-all;font-size:12px">' +
+      AL.esc(url) + '</div>' +
+    '<div class="fb">' +
+      '<button id="npNo">' + AL.esc(AL.t('close')) + '</button>' +
+      '<button id="npCopy" class="go">' + AL.esc(AL.t('prCopyUrl')) + '</button>' +
+    '</div>';
+  prSheetShow(true);
+  document.getElementById('npNo').addEventListener('click', function(){ prSheetShow(false); });
+  document.getElementById('npCopy').addEventListener('click', function(){
+    AL.copyText(url, this);
+  });
+}
+document.getElementById('prPvBg').addEventListener('click', hidePreview);
+
+/* 🔴🔴 2026-09-15 — 인쇄 창이 닫힌 뒤
+
+   ⚠ 웹 화면은 **저장했는지 취소했는지 알 수 없습니다.**
+     인쇄 창은 안드로이드(또는 PC)가 띄우는 것이고, 거기서 무슨 일이
+     있었는지 우리에게 알려주지 않습니다. 파일을 열거나 공유할 수도
+     없습니다.
+     그래서 "저장되었습니다" 라고 단정하지 않습니다. 거짓말이 될 수
+     있습니다. 대신 **어디를 보시면 되는지**만 알려드립니다.
+
+   ⚠ 진짜로 "저장했습니다 · 열기 · 공유" 를 하려면 앱(자바)에 파일을
+     만들고 넘겨주는 창구가 필요합니다. APK 를 다시 만들어야 합니다. */
+window.addEventListener('afterprint', function(){
+  if (!document.getElementById('prSheet').classList.contains('show')) return;
+  const box = document.getElementById('prBox');
+  hidePreview();
+  box.innerHTML =
+    '<h3>' + AL.esc(AL.t('prDoneTtl')) + '</h3>' +
+    '<p class="cap">' + AL.esc(AL.t('prDone1')) + '</p>' +
+    '<p class="cap">' + AL.esc(AL.t('prDone2')) + '</p>' +
+    '<div class="fb">' +
+      '<button id="prDoneNo">' + AL.esc(AL.t('close')) + '</button>' +
+      /* 🔴 2026-09-19 — 앱에도 창구가 있으니 늘 보여줍니다. */
+      '<button id="prDoneShare" class="go">' + AL.esc(AL.t('prShare')) + '</button>' +
+    '</div>';
+  prSheetShow(true);
+  document.getElementById('prDoneNo').addEventListener('click', function(){
+    prSheetShow(false);
+  });
+  const sh = document.getElementById('prDoneShare');
+  if (sh) sh.addEventListener('click', async function(){
+    await AL.shareText(AL.inviteUrl(prCode), { title: AL.t('invShareSys') });
+  });
+});
+
+/* 어느 초대든 뽑을 수 있게 창구를 하나로 모읍니다.
+   ⚠ 전에는 방금 만든 초대만 뽑을 수 있었습니다. 이미 만든 것을 다시
+     뽑으려면 새로 만들어야 했는데, 그러면 초대가 쓸데없이 늘어납니다. */
+function openPrint(code, face){
+  if (!code) return;
+  prCode = code;
+  prFace = face || '';
+  prPaint();
+  prSheetShow(true);
+}
+
+document.getElementById('printBtn').addEventListener('click', function(){
+  openPrint(lastCode, chosen ? chosen.display_name : '');
+});
+
+document.getElementById('again').addEventListener('click', function(){
+  document.getElementById('madePart').classList.remove('on');
+  document.getElementById('formPart').style.display = '';
+});
+
+document.getElementById('prPvBack').textContent = AL.t('prBack');
+document.getElementById('prPvGo').textContent = AL.t('prDoIt');
+
+(async function(){
+  AL.paintText();
+  /* 🔴 2026-09-18 — 폰의 ◁ 를 누르면 앱이 나가지 않고 돌아갑니다. */
+  AL.setBack('alias_me.html', function(){
+    /* 🔴 2026-09-18 — 열려 있는 창부터 닫습니다.
+       창을 띄워놓고 ◁ 를 눌렀는데 화면이 통째로 바뀌면 놀랍니다. */
+    if (document.getElementById('prSheet').classList.contains('show')) {
+      hidePreview(); return true;
+    }
+    if (document.getElementById('prBox').style.display === 'block') {
+      prSheetShow(false); return true;
+    }
+    return false;
+  });
+  me = await AL.requireLogin();
+  if (!me) return;
+  try {
+    aliases = await AL.loadAliases();
+  } catch (e) { console.error(e); }
+  if (!aliases.length) {
+    showErr(AL.t('errNoAlias'));
+    document.getElementById('make').disabled = true;
+  }
+  // 별칭 화면에서 "이 별칭으로 초대 만들기"로 넘어오면 그 별칭이 골라집니다.
+  paintFaces();
+  var qs = new URLSearchParams(location.search);
+  var wanted = qs.get('face');
+  if (wanted) chosen = aliases.filter(function(a){ return a.id === wanted; })[0] || null;
+  paintFaces();
+  await reloadMine();
+
+  /* 🔴 2026-09-15 — "나" 화면에서 [QR 인쇄] 로 바로 온 경우.
+     그 별칭의 **아직 쓸 수 있는 가장 최근 초대**를 찾아 바로 엽니다.
+     없으면 하나 만들라고 알려드립니다. */
+  if (qs.get('print') === '1' && wanted) {
+    const face = chosen ? chosen.display_name : '';
+    const ids = myInvites.map(function(i){ return i.id; });
+    let used = {};
+    try {
+      const lr = await AL.sb.from('links').select('via_invite_id').in('via_invite_id', ids);
+      (lr.data || []).forEach(function(l){
+        used[l.via_invite_id] = (used[l.via_invite_id] || 0) + 1;
+      });
+    } catch (e) {}
+
+    const mine = myInvites.filter(function(i){
+      return i.issuer_persona_id === wanted && inviteAlive(i, used[i.id]);
+    });
+    if (mine.length) {
+      openPrint(mine[0].code, face);        // 목록이 최신순이라 첫 줄이 가장 최근
+    } else {
+      showErr(AL.t('prNoInvite'));
+    }
+  }
+  AL.showPlanBar();   // 🔴 2026-09-14
+  AL.startAlerts();      // 어느 화면에 있든 새 메시지를 알려줍니다
+})();
+</script>
+<script>
+/* 🔴 2026-10-29 친구 초대 보상 안내 · 내 현황 */
+(async function(){
+  try {
+    var box = document.getElementById('rewardBox'); if (!box || !window.AL || !AL.sb) return;
+    var r = await AL.sb.rpc('my_invite_rewards'); var d = r && r.data;
+    if (!d || !d.ok) return;
+    var en = AL.lang === 'en', m = d.months || 1;
+    document.getElementById('rwT').textContent = en ? '🎁 Invite a friend — you both get ' + m + ' month' + (m > 1 ? 's' : '') + ' free'
+                                                  : '🎁 친구 초대하면 둘 다 이용권 ' + m + '개월';
+    document.getElementById('rwD').textContent = en ? 'When a friend who signs up through your invite makes their first purchase, you each get ' + m + ' more month. (New sign-ups only · 1:1 invites)'
+                                                  : '내 초대장으로 새로 가입한 친구가 처음 결제하면, 친구와 나 모두 ' + m + '개월이 더해집니다. (새로 가입한 분 · 1:1 초대만)';
+    var st = en ? 'Waiting for first purchase: ' + d.waiting + ' · Rewarded: ' + d.granted + ' (+' + d.earned_months + ' months)'
+                : '첫 결제 기다리는 친구 ' + d.waiting + '명 · 보상 받음 ' + d.granted + '명 (+' + d.earned_months + '개월)';
+    document.getElementById('rwS').textContent = (d.waiting || d.granted) ? st : '';
+    box.style.display = 'block';
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>

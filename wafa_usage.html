@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>와파 사용량</title>
+<meta name="theme-color" content="#0F6E68">
+<link rel="stylesheet" href="wafa.css?v=20261119">
+<script src="alias_config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="alias_common.js?v=20261119"></script>
+<script src="wafa.js?v=20261119"></script>
+</head>
+<body>
+<!-- 내 사용량 — 첫 화면에 내세우지 않고 [와파 홈 → 내 사용량]에서만 조용히 보여 줍니다.
+     쓰는 순서: 이월 쿠폰 → 기본 → 보충 (서버 wafa_quota 와 같음) -->
+<div class="wf">
+  <div class="wf-top"></div>
+  <div class="card" id="sub"></div>
+  <div class="card"><div class="meter" id="mv"></div><div class="meter" id="md" style="margin-top:12px"></div>
+    <div class="legend"><span><i style="background:var(--bar)"></i><span data-w="lgBase"></span></span>
+      <span><i style="background:var(--bar2)"></i><span data-w="lgRoll"></span></span>
+      <span><i style="background:var(--bar3)"></i><span data-w="lgAddon"></span></span></div></div>
+  <div class="card"><h2 data-w="storage"></h2><p class="muted" id="st"></p></div>
+  <div class="card"><h2 data-w="hist"></h2><table class="hist" id="hist"></table></div>
+</div>
+<script>
+(async function(){
+  WF.header(WF.t('usageTitle'), 'wafa_start.html');
+  WF.paint();
+  var sess = await AL.requireLogin(); if (!sess) return;
+  var me = await WF.me(), q = me.quota;
+  document.getElementById('sub').innerHTML = '<div style="font-weight:800">' + WF.esc(WF.subLine(me)) + '</div>' +
+    (q.active ? '' : '<p class="muted">' + WF.t('noPlanUse') + '</p>');
+
+  /* 막대: 전체(기본+이월+보충) 중 남은 몫을 색으로 — 쿠폰이 먼저 줄고, 그다음 기본, 마지막 보충 */
+  function meter(id, label, m){
+    var total = m.base + m.rollover + m.addon, used = Math.min(m.used, total);
+    var rLeft = Math.max(0, m.rollover - used), over1 = Math.max(0, used - m.rollover);
+    var bLeft = Math.max(0, m.base - over1), over2 = Math.max(0, over1 - m.base);
+    var aLeft = Math.max(0, m.addon - over2);
+    var pct = function(x){ return total ? (x / total * 100).toFixed(2) + '%' : '0'; };
+    document.getElementById(id).innerHTML =
+      '<div class="lbl"><b>' + WF.t(label) + '</b><span>' + WF.t('left', { n: m.left }) + ' · ' + WF.t('ofTotal', { u: m.used, t: total }) + '</span></div>' +
+      '<div class="bar" role="img" aria-label="' + WF.t(label) + ' ' + WF.t('left', { n: m.left }) + '">' +
+      '<i style="width:' + pct(bLeft) + ';background:var(--bar)"></i><i style="width:' + pct(rLeft) + ';background:var(--bar2)"></i>' +
+      '<i style="width:' + pct(aLeft) + ';background:var(--bar3)"></i></div>';
+  }
+  meter('mv', 'voice', q.voice); meter('md', 'video', q.video);
+  var gb = q.store_mb >= 1024 ? (q.store_mb / 1024).toFixed(q.store_mb % 1024 ? 1 : 0) + 'GB' : q.store_mb + 'MB';
+  document.getElementById('st').textContent = WF.t('storeTotal', { g: gb });
+
+  var h = await WF.rpc('wafa_usage_history');
+  document.getElementById('hist').innerHTML = '<tr><th>' + WF.t('month') + '</th><th>' + WF.t('voice') + '</th><th>' + WF.t('video') + '</th></tr>' +
+    (h || []).map(function(r){ return '<tr><td>' + r.ym + '</td><td>' + r.voice_min + '</td><td>' + r.video_min + '</td></tr>'; }).join('');
+})();
+</script>
+</body>
+</html>

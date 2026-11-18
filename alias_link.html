@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>부름</title>
+<link rel="stylesheet" href="alias_common.css?v=20260927a">
+<link rel="stylesheet" href="alias_theme.css?v=20261021d">
+<script src="alias_config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="alias_common.js?v=20261114a"></script>
+<script src="alias_e2ee.js?v=20260927a"></script>
+<script>
+/* ⚠ alias_common.js 를 못 읽으면 화면이 텅 빕니다. 글씨를 채우는 것이
+   그 파일이기 때문입니다. 빈 화면만 보면 원인을 알 수가 없어서,
+   여기서 잡아 사람 말로 알려줍니다.
+   가장 흔한 원인은 anon 열쇠 줄이 두 줄로 나뉜 것입니다. */
+document.addEventListener("DOMContentLoaded", function(){
+  if (typeof AL === "undefined" || typeof AL.t !== "function") {
+    document.body.innerHTML =
+      '<div style="padding:26px;font-family:system-ui,sans-serif;line-height:1.8;' +
+      'color:#DDE5F0;background:#0E1621;min-height:100vh">' +
+      '<b style="font-size:17px">alias_common.js 를 못 읽었습니다.</b><br><br>' +
+      '가장 흔한 원인은 anon 열쇠 줄이 두 줄로 나뉜 것입니다.<br>' +
+      'alias_common.js 20번 줄이 한 줄인지 확인하세요.<br><br>' +
+      '<span style="color:#7E8FA6">F12 → Console 에 진짜 원인이 찍힙니다.</span></div>';
+    return;
+  }
+  AL.bootTheme();
+});
+</script>
+</head>
+<body data-t-title="ttLink">
+<div class="wrap">
+
+  <div class="tophead" style="margin-bottom:10px"><a class="backlink" href="alias_contacts.html" data-t="dtlBack"></a><span class="gohome"><a href="alias_contacts.html" data-t="goHome"></a><a href="alias_me.html" data-t="goMe"></a></span></div>
+
+  <div id="body" style="display:none">
+    <div class="bighead">
+      <div class="cav" id="av"></div>
+      <h1 id="bigName"></h1>
+      <p id="bigCap"></p>
+    </div>
+
+    <div class="bigacts">
+      <button id="call" data-t="dtlCall"></button>
+      <button class="sec" id="msg" data-t="dtlMessage"></button>
+    </div>
+
+    <div class="dblock" id="facts"></div>
+    <div class="dblock" id="prefs"></div>
+
+    <button class="danger" id="cut" data-t="dtlCut"></button>
+  </div>
+
+  <div id="err" class="err"></div>
+  <div id="ok" class="ok"></div>
+
+</div>
+
+
+<script>
+/* =====================================================================
+   관계 상세
+   ⚠ 이 화면의 일은 하나입니다 — 이름 세 개가 각각 누구 것이고
+     누가 볼 수 있는지 밝히는 것. 오늘 헷갈린 게 전부 여기서 풀립니다.
+   ===================================================================== */
+
+let me = null;
+let row = null;
+let aliases = [];
+let linkTheme = {};
+let roomHours = null;
+let e2ee = false;
+let isRoom = false;
+let linkInfo = null;
+
+function themeIsCustom(){
+  return !!(linkTheme.mode || linkTheme.color || linkTheme.bubble || linkTheme.scene);
+}
+
+const linkId = new URLSearchParams(location.search).get('link');
+
+function showErr(msg){
+  const el = document.getElementById('err');
+  el.textContent = msg; el.classList.add('show');
+}
+
+function paint(){
+  const mine = !!row.peer_label;
+  const shown = row.peer_label || row.peer_display || AL.t('cntUnnamed');
+
+  document.getElementById('av').textContent = AL.initial(row.my_face);
+  /* 🔴 2026-09-13 — 이 관계에서 내가 쓰는 얼굴 */
+  AL.paintFace(document.getElementById('av'), row.my_face || '');
+  AL.myFaceMap().then(function(m){
+    var path = m[row.my_face];
+    if (!path) return;
+    var el = document.getElementById('av');
+    el.setAttribute('data-face', path);
+    AL.paintFaces(el.parentNode);
+  });
+  document.getElementById('bigName').textContent = shown;
+  document.getElementById('bigCap').textContent = mine ? AL.t('cntCapMine') : AL.t('cntCapTheir');
+
+  // ── 사실들 ──────────────────────────────────────────────
+  const facts = [];
+  if (mine) facts.push([AL.t('dtlPeerAlias'), row.peer_display || '', null]);
+  facts.push([AL.t('dtlMyFace'), row.my_face || '', 'face']);
+  facts.push([AL.t('dtlLinkedAt'), AL.fmtDateTime(row.linked_at), null]);
+  if (row.invite_memo) facts.push([AL.t('dtlMemo'), row.invite_memo, null]);
+
+  document.getElementById('facts').innerHTML = facts.map(function(f){
+    return '<div class="drow">' +
+      '<span class="dlab">' + AL.esc(f[0]) + '</span>' +
+      '<span class="dval">' + AL.esc(f[1]) +
+        (f[2] ? ' <button data-act="' + f[2] + '">' + AL.esc(AL.t('dtlChange')) + '</button>' : '') +
+      '</span>' +
+    '</div>';
+  }).join('');
+
+  // ── 내가 정하는 것들 ─────────────────────────────────────
+  document.getElementById('prefs').innerHTML =
+    '<div class="drow">' +
+      '<span class="dlab">' + AL.esc(AL.t('cntCapMine')) + '</span>' +
+      '<span class="dval">' + AL.esc(row.peer_label || AL.t('cntUnnamed')) +
+        ' <button data-act="label">' + AL.esc(AL.t('dtlChange')) + '</button></span>' +
+    '</div>' +
+    '<div class="drow">' +
+      '<span class="dlab">' + AL.esc(AL.t('thThisChat')) + '</span>' +
+      '<span class="dval">' +
+        AL.esc(themeIsCustom() ? AL.t('thPickHere') : AL.t('thUsingMine')) +
+        ' <button data-act="theme">' + AL.esc(AL.t('dtlChange')) + '</button></span>' +
+    '</div>' +
+    (isRoom
+      ? '<div class="drow">' +
+          '<span class="dlab">' + AL.esc(AL.t('grInvite')) + '</span>' +
+          '<span class="dval"><button data-act="addone">' +
+            AL.esc(AL.t('grAdd')) + '</button></span>' +
+        '</div>'
+      : '<div class="drow">' +
+          '<span class="dlab">' + AL.esc(AL.t('grPromote')) + '</span>' +
+          '<span class="dval"><button data-act="promote">' +
+            AL.esc(AL.t('dtlChange')) + '</button></span>' +
+        '</div>') +
+    '<div class="drow">' +
+      '<span class="dlab">' + AL.esc(AL.t('ecTitle')) + '</span>' +
+      '<span class="dval">' + AL.esc(e2ee ? AL.t('ecOn') : AL.t('ecOff')) +
+        (e2ee ? '' : ' <button data-act="lock">' + AL.esc(AL.t('ecTurnOn')) + '</button>') +
+      '</span>' +
+    '</div>' +
+    '<div class="drow">' +
+      '<span class="dlab">' + AL.esc(AL.t('mnTitle')) + '</span>' +
+      '<span class="dval"><button data-act="menu">' + AL.esc(AL.t('dtlChange')) + '</button></span>' +
+    '</div>' +
+    '<div class="drow">' +
+      '<span class="dlab">' + AL.esc(AL.t('exRoom')) + '</span>' +
+      '<span class="dval">' + AL.esc(AL.expiryLabel(roomHours || 0)) +
+        ' <button data-act="expiry">' + AL.esc(AL.t('dtlChange')) + '</button></span>' +
+    '</div>' +
+    '<div class="drow">' +
+      '<span class="dlab">' + AL.esc(AL.t('dtlNotify')) + '</span>' +
+      '<span class="dval"><button data-act="mute">' +
+        AL.esc(row.muted ? AL.t('dtlMuteOff') : AL.t('dtlMuteOn')) + '</button></span>' +
+    '</div>';
+
+  document.querySelectorAll('[data-act]').forEach(function(b){
+    b.addEventListener('click', function(){ act(b.getAttribute('data-act')); });
+  });
+
+  document.getElementById('body').style.display = '';
+}
+
+async function act(kind){
+  try {
+    if (kind === 'label') {
+      const next = prompt(AL.t('cntRenameAsk'), row.peer_label || '');
+      if (next === null) return;
+      await save({ peer_label: next.trim() || null });
+
+    } else if (kind === 'pin') {
+      await save({ pinned: !row.pinned });
+
+    } else if (kind === 'mute') {
+      await save({ muted: !row.muted });
+
+    } else if (kind === 'promote') {
+      // 🔴 잠긴 방은 못 바꿉니다. 새 사람이 지난 대화를 못 읽습니다.
+      if (e2ee) { showErr(AL.t('grLockedNo')); return; }
+      const nm = prompt(AL.t('grName'), row.peer_label || '');
+      if (nm === null) return;
+      try {
+        const r = await AL.sb.rpc('promote_to_room', { p_link_id: linkId, p_name: nm });
+        if (r.error) throw r.error;
+        isRoom = true;
+        paint();
+        showOk(AL.t('thSaved'));
+      } catch (e) {
+        console.error(e);
+        showErr(e.message === 'locked_room' ? AL.t('grLockedNo')
+                : AL.t('errGeneric', { msg: e.message || String(e) }));
+      }
+
+    } else if (kind === 'addone') {
+      location.href = 'alias_room_new.html?into=' + encodeURIComponent(linkId);
+
+    } else if (kind === 'lock') {
+      // 🔴 한 번 잠그면 못 되돌립니다. 지난 메시지는 그대로 남습니다.
+      if (!await AL.ensureUnlocked()) return;
+      try {
+        await AL.linkKey(linkId, row.my_side_id);   // 상대 열쇠가 없으면 여기서 걸립니다
+        const r = await AL.sb.from('links').update({ e2ee_on: true })
+          .eq('id', linkId).select('id');
+        if (r.error) throw r.error;
+        e2ee = true;
+        paint();
+        showOk(AL.t('ecMadeKey') + ' ' + AL.t('ecKeyNote'));
+      } catch (e) {
+        console.error('[e2ee]', e);
+        showErr(e.message === 'peer_no_key' ? AL.t('ecPeerNoKey')
+                : AL.t('errGeneric', { msg: e.message || String(e) }));
+      }
+
+    } else if (kind === 'menu') {
+      const out = await AL.openMenu(row.my_side_id, linkInfo);
+      if (!out) return;
+      linkInfo = Object.assign({}, linkInfo, out);
+      showOk(AL.t('thSaved'));
+
+    } else if (kind === 'expiry') {
+      // ⚠ 양쪽에서 사라지므로 상대에게 알림줄이 남습니다.
+      //   몰래 바꿀 수 없어야 서로 납득하고 씁니다.
+      const h = await AL.pickExpiry(roomHours || 0, true);
+      if (h === null) return;
+      await AL.callFn('alias-room-expiry', { linkId: linkId, hours: h || null });
+      roomHours = h || null;
+      paint();
+      showOk(AL.t('thSaved'));
+
+    } else if (kind === 'theme') {
+      const picked = await AL.pickLinkTheme(linkTheme);
+      if (picked === null) return;
+      const patch = (picked === 'reset')
+        ? { theme_mode:null, theme_color:null, bubble_style:null, scene:null }
+        : { theme_mode:picked.mode, theme_color:picked.color,
+            bubble_style:picked.bubble, scene:picked.scene };
+      await save(patch);
+      showOk(AL.t('thSaved'));
+
+    } else if (kind === 'face') {
+      // ⚠ 이 관계에서만 내 얼굴을 바꿉니다. 다른 관계는 그대로입니다.
+      //   전에는 prompt()에 번호를 치게 했는데, 이름을 치면 조용히 아무 일도
+      //   일어나지 않았습니다. 눌러서 고르게 바꿨습니다.
+      const picked = await AL.pickAlias({
+        currentName: row.my_face,
+        note: AL.t('dtlFaceAsk'),
+      });
+      if (!picked) return;
+      if (picked.display_name === row.my_face) return;   // 같은 것을 골랐으면 그냥 둡니다
+      await save({ persona_id: picked.id });
+      showOk(AL.t('dtlFaceDone'));
+    }
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+
+function showOk(msg){
+  const el = document.getElementById('ok');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('err').classList.remove('show');
+}
+
+async function save(patch){
+  // ⚠ RLS가 막으면 오류 없이 0줄이 바뀝니다(함정 ⑦).
+  //   select()를 붙여 정말 바뀌었는지 확인합니다.
+  const res = await AL.sb.from('link_sides').update(patch).eq('id', row.my_side_id).select('id');
+  if (res.error) throw res.error;
+  if (!res.data || !res.data.length) throw new Error(AL.t('errNoRows'));
+  await load();
+}
+
+async function cut(){
+  if (!confirm(AL.t('dtlCutAsk'))) return;
+  try {
+    const res = await AL.sb.from('links')
+      .update({ status: 'closed', closed_at: new Date().toISOString(), closed_reason: 'user' })
+      .eq('id', linkId);
+    if (res.error) throw res.error;
+    location.href = 'alias_contacts.html';
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+async function load(){
+  // my_contacts() 가 이미 필요한 걸 다 돌려줍니다. 새 함수를 만들지 않았습니다.
+  const res = await AL.sb.rpc('my_contacts');
+  if (res.error) throw res.error;
+  row = (res.data || []).filter(function(r){ return r.link_id === linkId; })[0];
+  if (!row) { showErr(AL.t('dtlNotFound')); return; }
+
+  // 이 방만의 모양이 있으면 그것으로 칠합니다. my_contacts 는 테마를 안 주므로
+  // link_sides 에서 내 줄만 따로 읽습니다(내 줄은 읽을 수 있습니다 — 블록 19).
+  const lk = await AL.sb.from('links')
+    .select('id, auto_delete_hours, preset, e2ee_on, kind, room_name').eq('id', linkId).maybeSingle();
+  roomHours = lk.data ? lk.data.auto_delete_hours : null;
+  e2ee = !!(lk.data && lk.data.e2ee_on);
+  isRoom = (lk.data && lk.data.kind === 'group');
+
+  const fs = await AL.sb.from('link_sides')
+    .select('features').eq('id', row.my_side_id).maybeSingle();
+  linkInfo = {
+    id: linkId,
+    preset: lk.data ? lk.data.preset : 'personal',
+    features: fs.data ? fs.data.features : null,
+  };
+
+  const th = await AL.sb.from('link_sides')
+    .select('theme_mode, theme_color, bubble_style, scene').eq('id', row.my_side_id).maybeSingle();
+  linkTheme = th.data ? {
+    mode: th.data.theme_mode, color: th.data.theme_color,
+    bubble: th.data.bubble_style, scene: th.data.scene,
+  } : {};
+  AL.applyLinkTheme({
+    theme_mode: linkTheme.mode, theme_color: linkTheme.color,
+    bubble_style: linkTheme.bubble, scene: linkTheme.scene,
+  });
+
+  paint();
+}
+
+document.getElementById('cut').addEventListener('click', cut);
+document.getElementById('call').addEventListener('click', async function(){
+  if (!await AL.requirePlan()) return;   // 🔴 2026-09-14 이용권
+  location.href = 'alias_call.html?link=' + encodeURIComponent(linkId) +
+    '&type=voice&once=' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+});
+document.getElementById('msg').addEventListener('click', function(){
+  location.href = 'alias_chat.html?link=' + encodeURIComponent(linkId);
+});
+
+(async function(){
+  AL.paintText();
+  /* 🔴 2026-09-18 — 폰의 ◁ 를 누르면 앱이 나가지 않고 돌아갑니다. */
+  AL.setBack('alias_contacts.html');
+  me = await AL.requireLogin();
+  if (!me) return;
+  if (!linkId) { showErr(AL.t('dtlNotFound')); return; }
+  try {
+    aliases = await AL.loadAliases();
+    await load();
+    AL.startAlerts();      // 어느 화면에 있든 새 메시지를 알려줍니다
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+})();
+</script>
+</body>
+</html>

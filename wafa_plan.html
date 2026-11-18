@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>와파 요금</title>
+<meta name="theme-color" content="#0F6E68">
+<link rel="stylesheet" href="wafa.css?v=20261119">
+<script src="alias_config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="alias_common.js?v=20261119"></script>
+<script src="wafa.js?v=20261119"></script>
+</head>
+<body>
+<!-- 와파 요금 · 보충
+     · 구독(자동결제) 1·3·6·12개월 — 결제창은 앱(구글 · 애플)이 열고, 영수증은 서버(wafa-verify)가 확인
+     · 보충권 1,100원 = 11칸 → 음성 30분 · 영상 10분 · 보관 100MB 로 나눠 담기 (wafa_addon_allocate) -->
+<div class="wf">
+  <div class="wf-top"></div>
+  <div class="card"><p class="muted" data-w="planNow"></p><div style="font-weight:800" id="now"></div></div>
+  <div class="plans" id="plans"></div>
+  <p class="muted" data-w="planInc"></p>
+  <p class="muted" data-w="autoNote"></p>
+  <a class="btn ghost" id="manage" style="display:grid;place-items:center;text-decoration:none" data-w="manage"></a>
+
+  <div class="card"><h2 data-w="addonT"></h2><p class="muted" data-w="addonD"></p>
+    <button class="btn" id="buyAddon" data-w="buyAddon"></button>
+    <div id="alloc" hidden>
+      <p class="msg ok" id="units"></p>
+      <div class="step"><span data-w="voiceU"></span><span class="ct"><button data-k="v" data-d="-1">−</button><b id="v">0</b><button data-k="v" data-d="1">+</button></span></div>
+      <div class="step"><span data-w="videoU"></span><span class="ct"><button data-k="d" data-d="-1">−</button><b id="d">0</b><button data-k="d" data-d="1">+</button></span></div>
+      <div class="step"><span data-w="storeU"></span><span class="ct"><button data-k="s" data-d="-1">−</button><b id="s">0</b><button data-k="s" data-d="1">+</button></span></div>
+      <button class="btn" id="doAlloc" data-w="allocate" style="margin-top:8px"></button>
+    </div>
+  </div>
+</div>
+<script>
+(async function(){
+  WF.header(WF.t('planTitle'), 'wafa_start.html');
+  WF.paint();
+  var sess = await AL.requireLogin(); if (!sess) return;
+  var me = await WF.me();
+  document.getElementById('now').textContent = WF.subLine(me);
+  document.getElementById('manage').href = WF.manageUrl();
+  var cur = me.sub && ['active','grace','canceled'].indexOf(me.sub.status) >= 0 && new Date(me.sub.until) > new Date() ? me.sub.product : null;
+
+  var P = document.getElementById('plans');
+  P.innerHTML = WF.PLANS.map(function(p){
+    var per = Math.round(p.price / p.months);
+    return '<button class="plan' + (p.id === cur ? ' on' : '') + '" data-id="' + p.id + '"><b>' + WF.t(p.k) + '</b><div class="p">' + WF.krw(p.price) + '</div>' +
+      '<span>' + WF.t('perMonth', { p: WF.krw(per) }) + '</span><span style="margin-top:6px;font-weight:800;color:var(--brand)">' +
+      (p.id === cur ? '✓' : cur ? WF.t('change') : WF.t('subscribe')) + '</span></button>'; }).join('');
+  P.onclick = function(e){
+    var b = e.target.closest('.plan'); if (!b || b.dataset.id === cur) return;
+    var plan = WF.PLANS.find(function(p){ return p.id === b.dataset.id; });
+    WF.onDone = function(o){ WF.toast(o.ok ? WF.t('payOk') : o.canceled ? WF.t('payCancel') : o.pending ? WF.t('payPending') : WF.t('payFail'));
+                             if (o.ok) setTimeout(function(){ location.reload(); }, 900); };
+    if (WF.subscribe(plan)) WF.toast(WF.t('paying'));
+  };
+
+  /* 보충권 */
+  var have = me.units || 0, n = { v:0, d:0, s:0 };
+  function drawAlloc(){
+    var used = n.v + n.d + n.s;
+    document.getElementById('alloc').hidden = !have;
+    document.getElementById('units').textContent = WF.t('units', { n: have - used });
+    ['v','d','s'].forEach(function(k){ document.getElementById(k).textContent = n[k]; });
+    document.getElementById('doAlloc').disabled = !used;
+  }
+  document.getElementById('alloc').addEventListener('click', function(e){
+    var b = e.target.closest('[data-k]'); if (!b) return;
+    var k = b.dataset.k, d = +b.dataset.d, used = n.v + n.d + n.s;
+    if (d > 0 && used >= have) return;
+    n[k] = Math.max(0, n[k] + d); drawAlloc();
+  });
+  document.getElementById('doAlloc').onclick = async function(){
+    this.disabled = true;
+    var r = await WF.rpc('wafa_addon_allocate', { p_voice: n.v, p_video: n.d, p_store: n.s });
+    if (r && r.ok) { WF.toast(WF.t('allocated')); have = r.units_left; n = { v:0, d:0, s:0 }; drawAlloc(); }
+    else { WF.toast(WF.t('err')); this.disabled = false; }
+  };
+  document.getElementById('buyAddon').onclick = function(){
+    WF.onDone = async function(o){
+      WF.toast(o.ok ? WF.t('payOk') : o.canceled ? WF.t('payCancel') : WF.t('payFail'));
+      if (o.ok) { me = await WF.me(); have = me.units || 0; drawAlloc(); }
+    };
+    if (WF.buy('wafa_addon')) WF.toast(WF.t('paying'));
+  };
+  drawAlloc();
+})();
+</script>
+</body>
+</html>

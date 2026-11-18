@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<script>
+/* 🔴 2026-10-23 — 번호판을 첫 화면으로 고른 분: 안드로이드 앱이 켜지며 스스로 연락처로 옮긴 경우 번호판으로 되돌립니다.
+   (번호판이 막 보였고(8초 안) 손님이 아무것도 누르지 않았을 때만 — 손님이 직접 [연락처로] 온 것은 그대로) */
+(function(){
+  /* 🔴 2026-11-01 — 누름을 첫 화면으로 고른 분: 앱이 스스로 연락처로 옮긴 경우 누름으로 되돌립니다(손님이 직접 온 것은 그대로) */
+  try {
+    if (localStorage.getItem('burum_first_screen') === 'nureum') {
+      const now0 = Date.now();
+      const shown0 = +(sessionStorage.getItem('burum_nureum_shown_at') || 0);
+      const tap0 = +(sessionStorage.getItem('burum_user_tap') || 0);
+      if (shown0 && now0 - shown0 < 8000 && now0 - tap0 > 3000) {
+        sessionStorage.removeItem('burum_nureum_shown_at');
+        location.replace('nureum.html');
+        return;
+      }
+    }
+  } catch (e) {}
+  try {
+    if (localStorage.getItem('burum_first_screen') !== 'dial') return;
+    const now = Date.now();
+    const shown = +(sessionStorage.getItem('burum_dial_shown_at') || 0);
+    const tap = +(sessionStorage.getItem('burum_user_tap') || 0);
+    if (shown && now - shown < 8000 && now - tap > 3000) {
+      sessionStorage.removeItem('burum_dial_shown_at');
+      location.replace('alias_phone.html?mode=dial');
+    }
+  } catch (e) {}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>부름</title>
+<link rel="stylesheet" href="alias_common.css?v=20260927a">
+<link rel="stylesheet" href="alias_theme.css?v=20261021d">
+<script src="alias_config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="alias_common.js?v=20261114a"></script>
+<script src="alias_call.js?v=20261020g"></script>
+<script>
+/* ⚠ alias_common.js 를 못 읽으면 화면이 텅 빕니다. 글씨를 채우는 것이
+   그 파일이기 때문입니다. 빈 화면만 보면 원인을 알 수가 없어서,
+   여기서 잡아 사람 말로 알려줍니다.
+   가장 흔한 원인은 anon 열쇠 줄이 두 줄로 나뉜 것입니다. */
+document.addEventListener("DOMContentLoaded", function(){
+  if (typeof AL === "undefined" || typeof AL.t !== "function") {
+    document.body.innerHTML =
+      '<div style="padding:26px;font-family:system-ui,sans-serif;line-height:1.8;' +
+      'color:#DDE5F0;background:#0E1621;min-height:100vh">' +
+      '<b style="font-size:17px">alias_common.js 를 못 읽었습니다.</b><br><br>' +
+      '가장 흔한 원인은 anon 열쇠 줄이 두 줄로 나뉜 것입니다.<br>' +
+      'alias_common.js 20번 줄이 한 줄인지 확인하세요.<br><br>' +
+      '<span style="color:#7E8FA6">F12 → Console 에 진짜 원인이 찍힙니다.</span></div>';
+    return;
+  }
+  AL.bootTheme();
+});
+</script>
+<style>
+/* 🔴 2026-09-12 신설 — 별표·단축번호 표시.
+   공용 CSS(alias_theme.css)를 안 건드리려고 여기에 둡니다.
+   다른 화면에 영향이 없습니다. */
+.spd{display:inline-block;min-width:1.35em;padding:0 .2em;margin-right:.35em;
+     border-radius:.5em;text-align:center;font-weight:700;
+     background:rgba(120,200,150,.18);color:#8FE3B0}
+.star{margin-right:.3em;color:#F2C94C}
+.spdgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.spdgrid button{margin:0;font-size:20px;padding:14px 0}
+.spdgrid button.used{opacity:.55}
+.spdgrid button small{display:block;font-size:11px;opacity:.75;font-weight:400}
+/* 🔴 2026-09-12 — 줄 메뉴 칸막이.
+   성격이 다른 것끼리 붙어 있으면 급할 때 엉뚱한 걸 누릅니다.
+     바로 하는 일  |  이 사람을 어떻게 둘지  |  다른 화면으로 */
+.msep{border:0;border-top:1px solid rgba(255,255,255,.10);margin:10px 2px}
+/* 🔴 2026-09-12 — 정렬 단추 줄. 눌리는 곳임이 보여야 합니다. */
+.sortrow{display:flex;justify-content:flex-end;margin:2px 0 10px}
+.sortbtn{appearance:none;-webkit-appearance:none;cursor:pointer;
+  padding:9px 16px;border-radius:999px;font-size:14px;font-weight:600;
+  background:rgba(255,255,255,.07);color:inherit;
+  border:1px solid rgba(255,255,255,.16);margin:0}
+.sortbtn:active{background:rgba(255,255,255,.16)}
+.sortbtn::after{content:' ▾';opacity:.7}
+
+/* 🔴 2026-09-12 — 누른 자리 밑에 펼쳐지는 메뉴 */
+#popbg{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.35)}
+#popmenu{display:none;position:absolute;z-index:81;min-width:210px;max-width:82vw;
+  padding:6px;border-radius:14px;
+  background:#1B2430;border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 14px 34px rgba(0,0,0,.55)}
+#popmenu .ttl{padding:9px 12px 7px;font-size:12px;opacity:.65;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#popmenu button{display:block;width:100%;margin:0;text-align:left;
+  appearance:none;-webkit-appearance:none;cursor:pointer;
+  padding:13px 12px;border:0;border-radius:9px;background:transparent;
+  color:#DDE5F0;font-size:15.5px;line-height:1.25}
+#popmenu button:active{background:rgba(255,255,255,.12)}
+#popmenu .sep{height:1px;margin:6px 4px;background:rgba(255,255,255,.11)}
+/* 지금 고른 것은 색으로 알려줍니다 */
+#popmenu button.cur{color:#8FE3B0;font-weight:700}
+#popmenu button.cur::after{content:' ✓'}
+#popmenu .spdgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:4px}
+#popmenu .spdgrid button{text-align:center;font-size:19px;font-weight:700;
+  padding:12px 0;background:rgba(255,255,255,.06)}
+#popmenu .spdgrid button.used{opacity:.6}
+#popmenu .spdgrid button small{display:block;font-size:10.5px;font-weight:400;
+  opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+<style>
+/* 🔴 2026-09-16 — 이름 옆 작은 내 얼굴표
+   ⚠ 공용 CSS 를 안 건드리려고 여기에 둡니다. */
+/* 🔴 2026-09-17 — 최근 대화 한 줄
+   ⚠ 두 줄까지만 보여줍니다. 길면 잘립니다. 목록이지 대화창이 아닙니다. */
+.cprev{margin-top:3px;font-size:13px;line-height:1.45;opacity:.72;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;word-break:break-word}
+
+/* 🔴 2026-09-17 — 사진을 키웠습니다.
+   줄 높이 안에 여유가 있어 키우면 시원해 보입니다.
+   ⚠ 왼쪽(상대)이 늘 더 커야 합니다. "큰 쪽이 상대" 규칙입니다. */
+.crow .cav{width:56px !important;height:56px !important;flex:0 0 56px !important;
+  font-size:21px !important;
+  background-repeat:no-repeat;background-size:cover;background-position:center}
+.crow .cname{display:flex;align-items:center;min-width:0}
+.crow .cname .nmx{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .cname .unread{flex:0 0 auto;margin-left:6px}
+.crow .cmine{font-size:12px;line-height:1.4;color:var(--dim);margin-top:3px;word-break:keep-all;overflow-wrap:anywhere}
+.crow .ctime{align-self:center;padding-top:0}
+.crow > .mymark{display:inline-flex;align-items:center;justify-content:center;
+  width:44px;height:44px;flex:0 0 44px;margin:0 -4px 0 0;border-radius:50% !important;
+  font-size:16px;font-weight:800;line-height:1;
+  background-repeat:no-repeat;background-size:cover;background-position:center}
+.tmp-av{width:40px;height:40px;flex:0 0 40px;display:flex;align-items:center;justify-content:center;font-size:18px;
+  border-radius:50% 14% 50% 14%;background:rgba(242,201,76,.16);border:1px solid rgba(242,201,76,.45)}
+/* 🔴 2026-10-01 임시연락처 입구 · [임시] 묶음
+   ⚠ 부름 테마의 색 이름(--raise · --text · --line · --dim)을 씁니다.
+     처음엔 --card(없는 이름)에 흰색을 대신 넣어, 야간 모드에서 흰 바탕에 밝은 글씨가 되어
+     글이 안 보였습니다. 이제 주간 · 야간 · 어느 색 테마에서도 테마를 따라갑니다. */
+.tmp-entry{ display:flex; align-items:center; gap:11px; text-decoration:none;
+  color:var(--text, inherit); background:var(--raise, rgba(128,128,128,.10));
+  border:1.5px dashed var(--line, rgba(128,128,128,.35)); border-radius:14px; padding:12px 14px; margin:8px 0 12px; }
+.tmp-ic{ font-size:22px; }
+.tmp-tx{ flex:1; min-width:0; }
+.tmp-tx b{ display:block; font-size:14px; color:var(--text, inherit); }
+.tmp-tx small{ display:block; font-size:11.5px; color:var(--dim, inherit); opacity:.95; line-height:1.5; margin-top:2px; }
+.tmp-new{ font-size:12px; font-weight:800; border-radius:20px; padding:6px 11px; background:var(--steel, #2F7DD1); color:#fff; white-space:nowrap; }
+.tmp-group{ margin:0 0 14px; }
+/* 🔴 2026-10-07 — 사람 잇기 단추 넷을 연락처 목록 바로 위에(2 × 2)
+   연락처가 길어지면 [+] 를 눌러 찾기 어려워서, 늘 보이는 자리에 둡니다. */
+.add-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 0 14px; }
+.add-grid a{ display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text, inherit);
+  background:var(--raise, rgba(128,128,128,.10)); border:1px solid var(--line, rgba(128,128,128,.3));
+  border-radius:12px; padding:11px 12px; font-size:13.5px; font-weight:700; line-height:1.3; min-height:46px; }
+.add-grid a:active{ opacity:.7; }
+.add-grid .ai{ font-size:18px; flex:0 0 auto; }
+.tmp-gh{ font-size:12px; font-weight:800; color:var(--dim, inherit); margin:4px 2px 6px; }
+.tmp-row{ display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text, inherit);
+  padding:10px 12px; border-radius:12px; background:var(--raise, rgba(128,128,128,.10));
+  border:1px solid var(--line, rgba(128,128,128,.25)); margin-bottom:6px; }
+.tmp-row .nm{ flex:1; min-width:0; font-size:14px; font-weight:700; color:var(--text, inherit); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tmp-row .sub{ display:block; font-size:11.5px; font-weight:400; color:var(--dim, inherit); margin-top:2px; }
+.tmp-row .dot{ min-width:20px; height:20px; border-radius:10px; background:#E5484D; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; padding:0 6px; }
+</style>
+</head>
+<body class="tabbed" data-t-title="ttContacts">
+<div class="wrap">
+
+  <div class="tophead">
+    <h1 class="h2" data-t="cntTitle"></h1>
+    <button class="plusbtn" id="plus" data-t-aria="ariaAdd">+</button>
+  </div>
+  <!-- 🔴 2026-11-14 안심 긴급 -->
+  <a href="sos.html" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:4px 0 10px;padding:11px 14px;border-radius:14px;background:linear-gradient(135deg,#E02424,#FF5A4F);color:#fff;font-weight:900;font-size:15.5px;text-decoration:none">🆘 안심 긴급 · 보호자에게 바로 알림</a>
+
+  <div class="tools">
+    <input id="q" type="search" autocomplete="off" data-t-ph="cntSearch">
+    <button class="toggle" id="grpBtn" data-t="cntGroup"></button>
+  </div>
+
+  <!-- 🔴 2026-09-12 — 정렬 단추는 자기 줄에 둡니다.
+       검색칸 옆(.tools)에 끼웠더니 그 칸이 두 개만 들어가게 짜여 있어
+       세 번째가 찌그러졌습니다. 눌러도 반응이 없는 것처럼 보였습니다.
+       공용 CSS 를 안 건드리려고 여기에 따로 냅니다. -->
+  <div class="sortrow">
+    <button class="sortbtn" id="sortBtn"></button>
+  </div>
+
+  <details class="legend">
+    <summary data-t="cntLegendOpen"></summary>
+    <p data-t="cntLegend"></p>
+  </details>
+
+  <div id="twin" class="ok" data-t="cntSamePeer"></div>
+
+  <!-- 🔴 2026-10-19 — 첫 접속을 쉽게: ① 받은 연결 요청을 맨 위에 크게(그 자리에서 수락) ② 연락처가 비었으면 환영 안내 -->
+  <div id="rqTop"></div>
+  <div id="welcome" style="display:none"></div>
+
+  <!-- 🔴 2026-10-19 순서: 전화번호부 → 동시통보 → 임시연락처 (손님 요청)
+       🔴 2026-10-01 — 1회용 임시연락처 입구와 [임시] 묶음
+       잠깐 쓸 연락처(중고거래 · 소개팅 · 매물)는 정식 연락처와 섞지 않고 따로 보입니다. -->
+  <!-- 🔴 2026-10-18 — 부름번호 입구: 번호로 걸기 · 내 번호 · 좋은 번호 -->
+  <a class="tmp-entry" id="bnEntry" href="alias_phone.html">
+    <span class="tmp-ic">☎️</span>
+    <span class="tmp-tx"><b id="bnEntryT">전화번호부 · 단축번호 · 부름번호</b><small id="bnEntryS">부름 연락처와 부름번호를 한곳에 · 번호로 걸기 · 내 번호 만들기</small></span>
+  </a>
+  <script>try{ if (window.AL && AL.lang === 'en') { document.getElementById('bnEntryT').textContent = 'Phone book · speed dial · Burum number'; document.getElementById('bnEntryS').textContent = 'Contacts and Burum numbers in one place · dial by number · get your number'; } }catch(e){}</script>
+  <!-- 🔴 2026-10-19 — 동시통보: 그룹을 미리 만들어 두고 한 번에 보내기 -->
+  <a class="tmp-entry" id="bcEntry" href="burum_bcast.html">
+    <span class="tmp-ic">📢</span>
+    <span class="tmp-tx"><b id="bcEntryT">동시통보</b><small id="bcEntryS">여러 사람에게 메시지 한 번에 · 그룹을 미리 만들어 두기</small></span>
+  </a>
+  <script>try{ if (window.AL && AL.lang === 'en') { document.getElementById('bcEntryT').textContent = 'Broadcast'; document.getElementById('bcEntryS').textContent = 'One message to many people · keep ready-made groups'; } }catch(e){}</script>
+  <a class="tmp-entry" id="tmpEntry" href="burum_temp.html">
+    <span class="tmp-ic">🎫</span>
+    <span class="tmp-tx"><b id="tmpEntryT"></b><small id="tmpEntryS"></small></span>
+    <span class="tmp-new" id="tmpNew"></span>
+  </a>
+  <div class="tmp-group" id="tmpGroup" style="display:none;">
+    <div class="tmp-gh" id="tmpGroupH"></div>
+    <div id="tmpList"></div>
+  </div>
+
+  <!-- 🔴 2026-10-07 — 사람 잇기: 임시연락처 바로 밑 · 연락처 바로 위 (오른쪽 위 [+] 에도 그대로 있음) -->
+  <div class="add-grid">
+    <a href="alias_invite.html"><span class="ai">📤</span><span data-t="addInvite"></span></a>
+    <a href="alias_requests.html"><span class="ai">📨</span><span id="qNick">닉네임 연결 요청</span></a>
+    <a href="alias_join.html"><span class="ai">📥</span><span data-t="addJoin"></span></a>
+    <a href="alias_room_new.html"><span class="ai">👥</span><span data-t="grNew"></span></a>
+  </div>
+
+  <div id="list"></div>
+  <div id="err" class="err"></div>
+
+</div>
+
+<!-- 연락처 늘리기 -->
+<div class="sheet-bg" id="addBg"></div>
+<div class="sheet" id="addSheet" style="display:none">
+  <div class="grip"></div>
+  <a href="alias_invite.html">
+    <span data-t="addInvite"></span>
+    <small data-t="addInviteSub"></small>
+  </a>
+  <!-- 🔴 2026-10-07 — 닉네임으로 연결 요청 (링크를 카톡 · 문자로 안 보내도 됨) -->
+  <a href="alias_requests.html">
+    <span id="addNickT">📨 닉네임으로 연결 요청</span>
+    <small id="addNickS">상대 닉네임만 알면 앱 안에서 바로 · 번호가 드러나지 않습니다</small>
+  </a>
+  <a href="alias_join.html">
+    <span data-t="addJoin"></span>
+    <small data-t="addJoinSub"></small>
+  </a>
+  <a href="alias_room_new.html">
+    <span data-t="grNew"></span>
+    <small data-t="grNewD"></small>
+  </a>
+</div>
+
+<!-- 🔴 2026-09-12 — 누른 자리 바로 밑에 펼쳐지는 메뉴.
+
+     전에는 화면 맨 아래에서 올라오는 방식(sheet)이었습니다. 그런데
+     누른 자리와 메뉴가 멀어서 눈이 따라가질 못했습니다. 목록이 길면
+     더 그렇습니다. 손님이 "찾기가 쉽지 않다" 고 하셨습니다.
+
+     이제 정렬 단추든 ⋯ 든, 누른 그 자리 바로 밑에 펼쳐집니다.
+     메뉴는 하나만 두고 내용만 갈아끼웁니다. -->
+<div id="popbg"></div>
+<div id="popmenu"></div>
+
+<nav class="tabbar">
+  <a href="alias_contacts.html" class="on" id="tabContacts"></a>
+  <a href="alias_calls.html" data-t="navCalls"></a>
+  <a href="alias_me.html" data-t="navMe"></a>
+</nav>
+
+<script>
+/* =====================================================================
+   연락처 (홈)
+   ⚠ 목록은 짧게. 설명은 관계 상세가 합니다.
+   ⚠ 위로 올리기·알림은 목록의 ⋯ 안에 둡니다. 상세 화면 안에서는
+     "위로 올린다"가 어디로 가는 건지 알 수가 없습니다(옆줄이 안 보이니까요).
+   ===================================================================== */
+
+let rows = [];
+let grouped = false;   // 별칭별로 묶어 볼지
+let closedGroups = {}; // 접힌 묶음
+let menuRow = null;    // ⋯ 를 누른 줄
+
+/* 🔴🔴 2026-09-12 신설 — 별표 · 단축번호 · 고정순서
+
+   왜 따로 읽는가
+     연락처 목록은 my_contacts() 함수가 만들어 줍니다. 거기에 칸을 더하려면
+     함수의 반환 모양을 바꿔야 하는데, 그러면 함수를 지웠다 다시 만들어야
+     하고 다른 화면까지 영향을 받습니다.
+     그래서 link_sides 에서 **필요한 세 칸만 따로 읽어** 붙입니다.
+     서버에 한 번 더 다녀오지만 연락처가 수백 개가 아니면 차이가 없습니다.
+     나중에 느려지면 그때 함수로 옮기면 됩니다.
+
+   ⚠ my_contacts 가 돌려주는 my_side_id 가 link_sides.id 입니다.
+     그것으로 짝을 맞춥니다. */
+let extra = {};        // my_side_id → { starred, speed_dial, pin_order }
+let myFaces = {};      // 🔴 2026-09-13 — 내 별칭 이름 → 사진 경로
+let previews = {};     // 🔴 2026-09-17 — link_id → 마지막 메시지 한 줄
+let previewOn = false; // 🔴 2026-09-17 — 손님이 켜뒀는가
+let hidden = {};       // 🔴 2026-09-17 — link_id → 이 사이만 가렸는가
+
+const SORT_KEY = 'alias_contacts_sort_v1';
+let sortBy = 'recent'; // recent · name · star · speed
+try { sortBy = localStorage.getItem(SORT_KEY) || 'recent'; } catch (e) {}
+
+/* 줄 하나의 별표·단축번호를 꺼냅니다. 없으면 기본값입니다. */
+function ex(r){
+  return extra[r.my_side_id] || { starred: false, speed_dial: null, pin_order: null };
+}
+
+function showErr(msg){
+  const el = document.getElementById('err');
+  el.textContent = msg; el.classList.add('show');
+}
+
+/* ── 걸러내기 ────────────────────────────────────────────────────
+   내가 부른 이름, 상대 별칭, 내 별칭 셋 다에서 찾습니다.
+   "업무용으로 만난 사람"을 찾을 수 있어야 하니까요. */
+function visible(){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter(function(r){
+    return [r.peer_label, r.peer_display, r.my_face]
+      .some(function(v){ return v && v.toLowerCase().indexOf(q) >= 0; });
+  });
+}
+
+/* 목록에 보일 이름. 그룹이면 방 이름입니다. */
+function nameOf(r){
+  return (r.kind === 'group')
+    ? (r.room_name || AL.t('grNoName'))
+    /* 🔴 2026-09-22 — 상대가 계정을 지웠으면 상대 별칭이 비어 옵니다.
+       "이름 없음" 이 아니라 "떠난 사람" 으로 보여줍니다.
+       ⚠ 내가 붙여둔 이름(peer_label)이 있으면 그게 먼저입니다. */
+    : (r.peer_label || r.peer_display || AL.t('goneName'));
+}
+
+/* ── 정렬 ────────────────────────────────────────────────────────
+   ⚠ 어느 정렬이든 "위로 올린 것" 은 항상 맨 위입니다.
+     손님이 일부러 올려둔 것이니, 정렬을 바꿨다고 내려가면 안 됩니다.
+   ⚠ 위로 올린 것들끼리는 pin_order 로 순서를 매깁니다(⋯ 의 ▲▼). */
+function sorted(list){
+  const byName = function(a, b){
+    return nameOf(a).localeCompare(nameOf(b), AL.lang === 'kr' ? 'ko' : 'en');
+  };
+  const byRecent = function(a, b){
+    return String(b.last_activity_at || '').localeCompare(String(a.last_activity_at || ''));
+  };
+
+  const rest = function(a, b){
+    if (sortBy === 'name') return byName(a, b);
+    if (sortBy === 'star') {
+      const sa = ex(a).starred ? 0 : 1, sb = ex(b).starred ? 0 : 1;
+      if (sa !== sb) return sa - sb;
+      return byRecent(a, b);
+    }
+    if (sortBy === 'speed') {
+      // 단축번호가 있는 것이 먼저, 번호 순. 없는 것은 뒤에 최근 순.
+      const na = ex(a).speed_dial, nb = ex(b).speed_dial;
+      if (na && nb) return na - nb;
+      if (na) return -1;
+      if (nb) return 1;
+      return byRecent(a, b);
+    }
+    return byRecent(a, b);
+  };
+
+  return list.slice().sort(function(a, b){
+    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;   // 올린 것이 항상 위
+    if (a.pinned && b.pinned) {
+      const oa = ex(a).pin_order, ob = ex(b).pin_order;
+      if (oa != null && ob != null && oa !== ob) return oa - ob;
+      if (oa != null) return -1;
+      if (ob != null) return 1;
+    }
+    return rest(a, b);
+  });
+}
+
+function rowHtml(r){
+  // ⚠ 그룹은 상대가 여럿이라 방 이름으로 부릅니다.
+  const shown = nameOf(r);
+  const sub = r.peer_label ? (r.peer_display || '') : '';
+  const e = ex(r);   // 🔴 2026-09-12 — 별표 · 단축번호
+  const n = r.unread || 0;
+  const isRoom = r.kind === 'group';
+  return '<div class="crow' + (n ? ' hasnew' : '') + (isRoom ? ' room' : '') + '">' +
+    /* 🔴 2026-09-13 — 별칭마다 색과 모양이 다릅니다.
+       이 앱의 핵심(관계마다 다른 나)이 눈에 보이게 하는 자리입니다.
+       ⚠ 방은 상대가 여럿이라 방 이름으로 칠합니다. */
+    /* 🔴🔴 2026-09-16 — 큰 것은 **상대**, 작은 것은 **나**.
+
+       무엇이 잘못돼 있었나
+         여기 동그라미가 "내가 이 관계에서 쓰는 별칭" 이었습니다.
+         그래서 같은 별칭을 쓰는 관계가 **전부 같은 사진**이었습니다.
+           개인용 · 24시편의점 · YoungMen  → 모두 아기 사진
+         **손님이 상대를 못 고릅니다.** 고장에 가까웠습니다.
+
+       다른 메신저는 상대 얼굴을 보고 누르는 데 익숙합니다. 그 습관을
+       거스를 이유가 없습니다. 상대를 찾는 것이 이 목록의 일이니까요.
+
+       그러면 "내가 지금 누구인가" 는 어디로 가나
+         → 이름 오른쪽에 **작은 얼굴표**로 둡니다. 색과 모양이 다르므로
+           작아도 구별됩니다. 확인하는 용도라 작아도 됩니다.
+
+       ⚠ 방은 상대가 여럿이라 상대 사진이 없습니다. 방 이름으로 칠합니다. */
+    '<div class="cav" data-go="' + AL.esc(r.link_id) + '"' +
+      AL.faceAttr(isRoom ? (r.room_name || '') : (shown || ''), isRoom ? '30%' : '50%') +
+      (!isRoom && r.peer_avatar
+        ? ' data-face="' + AL.esc(r.peer_avatar) + '"' : '') + '>' +
+      AL.esc(isRoom ? '👥' : AL.initial(shown)) + '</div>' +
+    '<div class="cmid" data-go="' + AL.esc(r.link_id) + '">' +
+      '<div class="cname">' +
+        (e.speed_dial ? '<span class="spd">' + AL.esc(e.speed_dial) + '</span>' : '') +
+        (e.starred ? '<span class="star">★</span>' : '') +
+        '<span class="nmx">' + (r.pinned ? '▲ ' : '') + AL.esc(shown) + '</span>' +
+        (n ? '<span class="unread">' + AL.esc(n > 99 ? '99+' : n) + '</span>' : '') +
+      '</div>' +
+      /* 🔴 2026-10-21 — 상대 이름 아래에 "나: 내 별칭" (전부 · 작게) */
+      (r.my_face ? '<div class="cmine">' + AL.esc(r.my_face) + '</div>' : '') +
+      /* 🔴 2026-09-17 — 최근 대화 한 줄. **켜뒀을 때만** 나옵니다.
+         ⚠ 기본은 꺼져 있습니다. 옆 사람이 읽으면 안 되니까요. */
+      (previewOn
+        ? (function(){
+            var t = AL.previewText(previews[r.link_id], r.my_side_id);
+            return t ? '<div class="cprev">' + AL.esc(t) + '</div>' : '';
+          })()
+        : '') +
+      (sub ? '<div class="csub">' + AL.esc(r.my_face ? (AL.lang !== 'en' ? '상대 이름: ' : 'Their name: ') + sub : sub) + '</div>' : '') +
+    '</div>' +
+    /* 🔴 2026-10-21 — 내 별칭 그림은 시간 바로 앞, 늘 같은 자리 */
+    (r.my_face
+      ? '<span class="mymark" data-go="' + AL.esc(r.link_id) + '"' + AL.faceAttr(r.my_face || '', '50%') +
+        (myFaces[r.my_face] ? ' data-face="' + AL.esc(myFaces[r.my_face]) + '"' : '') +
+        ' title="' + AL.esc(r.my_face || '') + '">' + AL.esc(AL.initial(r.my_face)) + '</span>'
+      : '') +
+    /* 🔴 2026-09-12 — "어제" 가 아니라 월일 시분까지 보여줍니다.
+       같은 상대가 여러 줄일 때 시각으로 구별하라고 안내하면서
+       정작 시각을 안 보여주고 있었습니다. */
+    '<div class="ctime">' + AL.esc(AL.fmtWhen(r.last_activity_at)) + '</div>' +
+    '<button class="cdots" data-menu="' + AL.esc(r.link_id) + '" aria-label="' + AL.esc(AL.t('ariaMore')) + '">⋯</button>' +
+  '</div>';
+}
+
+function paint(){
+  const box = document.getElementById('list');
+  const list = visible();
+
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty">' + AL.esc(AL.t('cntEmpty')) + '</div>';
+    document.getElementById('twin').classList.remove('show');
+    return;
+  }
+
+  // 같은 상대가 여러 줄이면 안내. 버그가 아니라 설계입니다.
+  const seen = {}; let twin = false;
+  rows.forEach(function(r){
+    const k = (r.peer_label || '') + '\u0000' + (r.peer_display || '');
+    if (seen[k]) twin = true;
+    seen[k] = 1;
+  });
+  document.getElementById('twin').classList.toggle('show', twin);
+
+  // 하단 탭에도 총합을 띄웁니다. 다른 탭에 있어도 눈에 띄게.
+  const total = rows.reduce(function(a, r){ return a + (r.unread || 0); }, 0);
+  const tab = document.getElementById('tabContacts');
+  tab.innerHTML = AL.esc(AL.t('navContacts')) +
+    (total ? '<span class="tb-badge">' + AL.esc(total > 99 ? '99+' : total) + '</span>' : '');
+
+  if (!list.length) {
+    box.innerHTML = '<div class="nores">' + AL.esc(AL.t('cntNoMatch')) + '</div>';
+    return;
+  }
+
+  if (!grouped) {
+    box.innerHTML = sorted(list).map(rowHtml).join('');
+  } else {
+    // 내가 쓰는 별칭으로 묶습니다. "업무용으로 만난 사람들"이 한 덩어리가 됩니다.
+    const order = [];
+    const bag = {};
+    list.forEach(function(r){
+      const k = r.my_face || '';
+      if (!bag[k]) { bag[k] = []; order.push(k); }
+      bag[k].push(r);
+    });
+    box.innerHTML = order.map(function(k){
+      const closed = !!closedGroups[k];
+      return '<div class="grp' + (closed ? ' closed' : '') + '" data-grp="' + AL.esc(k) + '">' +
+          '<span class="gav"' + AL.faceAttr(k) +
+            (myFaces[k] ? ' data-face="' + AL.esc(myFaces[k]) + '"' : '') + '>' +
+            AL.esc(AL.initial(k)) + '</span>' +
+          '<span class="gname">' + AL.esc(k) + '</span>' +
+          '<span class="gcount">' + AL.esc(AL.t('cntCount', { n: bag[k].length })) + '</span>' +
+          '<span class="gcaret">▼</span>' +
+        '</div>' +
+        (closed ? '' : sorted(bag[k]).map(rowHtml).join(''));
+    }).join('');
+  }
+
+  AL.paintFaces(box);   // 🔴 2026-09-13 — 사진은 오는 대로 덮어씁니다
+
+  box.querySelectorAll('[data-go]').forEach(function(el){
+    el.addEventListener('click', function(){
+      location.href = 'alias_chat.html?link=' + encodeURIComponent(el.getAttribute('data-go'));
+    });
+  });
+  box.querySelectorAll('[data-menu]').forEach(function(el){
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      openRowMenu(el);
+    });
+  });
+  box.querySelectorAll('[data-grp]').forEach(function(el){
+    el.addEventListener('click', function(){
+      const k = el.getAttribute('data-grp');
+      closedGroups[k] = !closedGroups[k];
+      paint();
+    });
+  });
+}
+
+/* =====================================================================
+   🔴🔴 2026-09-12 — 누른 자리 바로 밑에 펼쳐지는 메뉴
+
+   전에는 화면 맨 아래에서 올라오는 방식이었습니다. 누른 자리와 메뉴가
+   멀어 눈이 따라가질 못했고, 목록이 길면 아예 못 찾았습니다.
+
+   이제 메뉴 상자는 **하나만** 두고 내용만 갈아끼웁니다.
+   정렬 단추든 ⋯ 든, 그 단추 바로 밑에 붙습니다.
+
+   ⚠ 화면 아래쪽 줄에서 누르면 메뉴가 화면 밖으로 나갑니다.
+     그때는 단추 **위쪽**에 붙입니다.
+   ⚠ 오른쪽 끝 줄에서 누르면 옆으로 넘칩니다. 그때는 오른쪽 끝에 맞춥니다.
+   ===================================================================== */
+let menuRowEl = null;   // ⋯ 를 누른 그 단추. 메뉴를 붙일 자리입니다.
+
+function closePop(){
+  document.getElementById('popbg').style.display = 'none';
+  document.getElementById('popmenu').style.display = 'none';
+}
+
+function openPop(anchor, html){
+  const pop = document.getElementById('popmenu');
+  pop.innerHTML = html;
+  document.getElementById('popbg').style.display = 'block';
+  pop.style.display = 'block';
+
+  // 크기를 알려면 일단 보여야 합니다. 그 뒤에 자리를 잡습니다.
+  const r = anchor.getBoundingClientRect();
+  const w = pop.offsetWidth, hh = pop.offsetHeight;
+
+  let left = r.left + window.scrollX;
+  if (left + w > window.innerWidth - 10) left = window.innerWidth - w - 10;
+  if (left < 10) left = 10;
+
+  let top = r.bottom + window.scrollY + 6;
+  if (r.bottom + hh + 12 > window.innerHeight) {
+    top = r.top + window.scrollY - hh - 6;            // 위로 뒤집기
+    if (top < window.scrollY + 10) top = window.scrollY + 10;
+  }
+
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+  return pop;
+}
+
+document.getElementById('popbg').addEventListener('click', closePop);
+window.addEventListener('resize', closePop);
+
+/* ── 줄 메뉴 (⋯) ─────────────────────────────────────────────── */
+function openRowMenu(btn){
+  const linkId = btn.getAttribute('data-menu');
+  menuRow = rows.filter(function(r){ return r.link_id === linkId; })[0];
+  if (!menuRow) return;
+  menuRowEl = btn;
+
+  const e = ex(menuRow);
+  const isRoom = menuRow.kind === 'group';
+  const b = function(act, label){
+    return '<button data-act="' + act + '">' + AL.esc(label) + '</button>';
+  };
+
+  let html = '<div class="ttl">' + AL.esc(nameOf(menuRow)) + '</div>';
+
+  /* 바로 하는 일
+     🔴 2026-09-12 — 영상은 **따로 골라야** 합니다. 기본은 늘 음성입니다.
+        실수로 얼굴이 나가면 되돌릴 수 없습니다. */
+  if (!isRoom) {
+    html += b('call', AL.t('cntCallNow'));
+    html += b('vcall', AL.t('clVideoCall'));
+  }
+  html += b('msg', AL.t('cntMsgNow'));
+  /* 🔴 2026-09-17 — 민감한 사이만 가릴 수 있어야 합니다.
+
+     ⚠ 이 함수 안에서 관계 번호는 **linkId** 입니다. 다른 함수의 이름(id)을
+       그대로 가져다 썼다가 메뉴가 통째로 안 열렸습니다. 없는 이름을 읽으면
+       그 자리에서 멈추고, 그 뒤 줄들이 아예 안 그려집니다.
+
+     ⚠ 전체가 꺼져 있어도 보여줍니다. "나중에 켤 텐데 이 사람만은 미리
+       막아두고 싶다" 를 할 수 있어야 하니까요. */
+  if (!isRoom) {
+    /* 🔴 2026-09-18 — 상대 갤러리로 갑니다.
+       ⚠ 방은 상대가 여럿이라 갤러리를 고를 수 없습니다. */
+    html += b('gal', AL.t('glVisit'));
+    html += b('prev', AL.t(hidden[linkId] ? 'pvShowOne' : 'pvHideOne'));
+  }
+  html += '<div class="sep"></div>';
+
+  /* 이 사람을 어떻게 둘지 */
+  html += b('star', e.starred ? AL.t('cntStarOff') : AL.t('cntStarOn'));
+  html += b('speed', AL.t('cntSpeedSet') + (e.speed_dial ? ' (' + e.speed_dial + ')' : ''));
+  html += b('pin', menuRow.pinned ? AL.t('dtlPinOff') : AL.t('dtlPinOn'));
+  if (menuRow.pinned) {
+    html += b('up', AL.t('cntMoveUp'));
+    html += b('down', AL.t('cntMoveDown'));
+  }
+  html += b('mute', menuRow.muted ? AL.t('dtlMuteOff') : AL.t('dtlMuteOn'));
+  html += '<div class="sep"></div>';
+
+  /* 다른 화면으로 */
+  html += b('open', AL.t('cntOpenDetail'));
+
+  const pop = openPop(btn, html);
+  pop.querySelectorAll('[data-act]').forEach(function(el){
+    el.addEventListener('click', function(){ rowAction(el.getAttribute('data-act')); });
+  });
+}
+
+async function patchSide(patch){
+  // ⚠ RLS가 막으면 오류 없이 0줄이 바뀝니다(함정 ⑦). select 로 확인합니다.
+  const res = await AL.sb.from('link_sides')
+    .update(patch).eq('id', menuRow.my_side_id).select('id');
+  if (res.error) throw res.error;
+  if (!res.data || !res.data.length) throw new Error(AL.t('errNoRows'));
+  await reload();
+}
+
+function newTicket(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+async function rowAction(act){
+  const id = menuRow.link_id;
+
+  /* 단축번호는 메뉴를 닫지 않고 그 자리에서 번호판으로 바뀝니다. */
+  if (act === 'speed') { openSpeedPad(); return; }
+
+  closePop();
+  try {
+    /* 🔴 2026-09-14 — 보내기·걸기는 이용권이 있어야 합니다.
+       받기·읽기·끊기는 그대로 둡니다. */
+    if (act === 'call' || act === 'vcall' || act === 'msg') {
+      if (!await AL.requirePlan()) return;
+    }
+
+    if (act === 'call') {
+      location.href = 'alias_call.html?link=' + encodeURIComponent(id) +
+        '&type=voice&once=' + newTicket();
+    } else if (act === 'vcall') {
+      location.href = 'alias_call.html?link=' + encodeURIComponent(id) +
+        '&type=video&once=' + newTicket();
+    } else if (act === 'gal') {
+      /* 상대가 이 관계에서 쓰는 별칭을 찾아 그 갤러리로 갑니다. */
+      var pp = await AL.peerPersona(id);
+      if (!pp) { alert(AL.t('glNone')); return; }
+      location.href = 'alias_gallery.html?p=' + encodeURIComponent(pp.persona_id) +
+        '&n=' + encodeURIComponent(pp.display_name || '');
+    } else if (act === 'prev') {
+      /* 🔴 2026-09-17 — 내 줄에만 적습니다. 상대는 모릅니다. */
+      var side = (rows.filter(function(x){ return x.link_id === id; })[0] || {}).my_side_id;
+      if (side) {
+        var want = !hidden[id];
+        var up = await AL.sb.from('link_sides')
+          .update({ hide_preview: want }).eq('id', side).select('id');
+        if (!up.error && up.data && up.data.length) {
+          hidden[id] = want;
+          previews = await AL.loadPreviews();
+          paint();
+        } else {
+          console.warn('[preview] 가리기 저장 실패', up.error);
+        }
+      }
+    } else if (act === 'msg') {
+      location.href = 'alias_chat.html?link=' + encodeURIComponent(id);
+    } else if (act === 'open') {
+      location.href = 'alias_link.html?link=' + encodeURIComponent(id);
+    } else if (act === 'star') {
+      await patchSide({ starred: !ex(menuRow).starred });
+    } else if (act === 'pin') {
+      await patchSide({ pinned: !menuRow.pinned });
+    } else if (act === 'mute') {
+      await patchSide({ muted: !menuRow.muted });
+    } else if (act === 'up') {
+      await movePinned(-1);
+    } else if (act === 'down') {
+      await movePinned(1);
+    }
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+/* ── 위로 올린 것들의 순서 ────────────────────────────────────────
+   손가락으로 끌어 옮기는 방식(드래그)은 폰에서 잘 안 눌립니다.
+   ▲▼ 단추가 훨씬 확실합니다.
+
+   ⚠ pin_order 가 비어 있는 줄이 섞여 있을 수 있어, 옮길 때마다
+     올린 것 전체에 1,2,3... 을 다시 매깁니다. 몇 개 안 되니 괜찮습니다. */
+async function movePinned(delta){
+  const pins = sorted(rows.filter(function(r){ return r.pinned; }));
+  const i = pins.findIndex(function(r){ return r.link_id === menuRow.link_id; });
+  if (i < 0) return;
+  const j = i + delta;
+  if (j < 0 || j >= pins.length) return;           // 맨 끝이면 그대로
+
+  const t = pins[i]; pins[i] = pins[j]; pins[j] = t;
+
+  for (let k = 0; k < pins.length; k++) {
+    const res = await AL.sb.from('link_sides')
+      .update({ pin_order: k + 1 }).eq('id', pins[k].my_side_id).select('id');
+    if (res.error) throw res.error;
+  }
+  await reload();
+}
+
+/* ── 단축번호 번호판 ─────────────────────────────────────────────
+   ⋯ 메뉴가 있던 그 자리에서 번호판으로 바뀝니다. 화면이 안 움직이니
+   어디를 보고 있었는지 안 놓칩니다. */
+function openSpeedPad(){
+  const owner = {};
+  rows.forEach(function(r){
+    const n = ex(r).speed_dial;
+    if (n) owner[n] = r;
+  });
+
+  let html = '<div class="ttl">' + AL.esc(nameOf(menuRow)) + ' — ' +
+             AL.esc(AL.t('cntSpeedAsk')) + '</div><div class="spdgrid">';
+  for (let n = 1; n <= 9; n++) {
+    const o = owner[n];
+    const mine = o && o.link_id === menuRow.link_id;
+    html += '<button data-spd="' + n + '" class="' +
+      (mine ? 'cur' : (o ? 'used' : '')) + '">' + n +
+      (o ? '<small>' + AL.esc(nameOf(o)) + '</small>' : '') + '</button>';
+  }
+  html += '</div><div class="sep"></div>' +
+          '<button data-spd="0">' + AL.esc(AL.t('cntSpeedNone')) + '</button>';
+
+  const pop = openPop(menuRowEl, html);
+  pop.querySelectorAll('[data-spd]').forEach(function(el){
+    el.addEventListener('click', function(){
+      const n = parseInt(el.getAttribute('data-spd'), 10);
+      setSpeed(n || null, owner);
+    });
+  });
+}
+
+async function setSpeed(n, owner){
+  try {
+    /* ⚠ 한 사람이 같은 번호를 둘 가질 수 없게 DB 에 막아뒀습니다.
+       그러니 남이 쓰던 번호면 **먼저 비우고** 나서 넣어야 합니다.
+       순서를 바꾸면 "이미 있다" 는 오류가 납니다. */
+    if (n && owner[n] && owner[n].link_id !== menuRow.link_id) {
+      if (!confirm(AL.t('cntSpeedTaken', { n: n, who: nameOf(owner[n]) }))) return;
+      const c = await AL.sb.from('link_sides')
+        .update({ speed_dial: null }).eq('id', owner[n].my_side_id).select('id');
+      if (c.error) throw c.error;
+    }
+    closePop();
+    await patchSide({ speed_dial: n });
+  } catch (e) {
+    console.error(e);
+    closePop();
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+/* ── 정렬 고르기 ─────────────────────────────────────────────────
+   지금 고른 것은 **색과 ✓** 로 알려줍니다. 뭘 보고 있는지 알아야
+   바꿀지 말지 정할 수 있습니다. */
+const SORTS = [
+  ['recent', 'cntSortRecent'],
+  ['name',   'cntSortName'],
+  ['star',   'cntSortStar'],
+  ['speed',  'cntSortSpeed'],
+];
+
+function sortLabel(){
+  const hit = SORTS.filter(function(s){ return s[0] === sortBy; })[0] || SORTS[0];
+  return AL.t('cntSort') + ' · ' + AL.t(hit[1]);
+}
+
+document.getElementById('sortBtn').addEventListener('click', function(){
+  const btn = this;
+  const html = SORTS.map(function(s){
+    return '<button data-sort="' + s[0] + '" class="' +
+      (s[0] === sortBy ? 'cur' : '') + '">' + AL.esc(AL.t(s[1])) + '</button>';
+  }).join('');
+  const pop = openPop(btn, html);
+  pop.querySelectorAll('[data-sort]').forEach(function(el){
+    el.addEventListener('click', function(){
+      sortBy = el.getAttribute('data-sort');
+      try { localStorage.setItem(SORT_KEY, sortBy); } catch (e) {}
+      btn.textContent = sortLabel();
+      closePop();
+      paint();
+    });
+  });
+});
+
+/* ── 읽어오기 ───────────────────────────────────────────────── */
+async function reload(){
+  try {
+    const res = await AL.sb.rpc('my_contacts');
+    if (res.error) throw res.error;
+    rows = res.data || [];
+    /* 🔴 2026-10-19 — 받은 요청 카드 · 환영 안내(아래 읽기가 실패해도 먼저 그립니다) */
+    try { if (window.bnOnboard) window.bnOnboard(rows); } catch (e) { console.warn('[onboard]', e); }   // 🔴 2026-10-19
+
+    /* 🔴 2026-09-12 — 별표 · 단축번호 · 고정순서를 따로 읽어 붙입니다.
+       my_contacts 함수를 안 건드리려는 것입니다. 위 설명 참고.
+       ⚠ 못 읽어도 목록은 그려야 합니다. 별표만 안 보일 뿐입니다. */
+    try {
+      const e2 = await AL.sb.from('link_sides')
+        .select('id, starred, speed_dial, pin_order');
+      if (!e2.error) {
+        extra = {};
+        (e2.data || []).forEach(function(x){ extra[x.id] = x; });
+      } else {
+        console.warn('[contacts] 별표를 못 읽었습니다', e2.error);
+      }
+    } catch (e) { console.warn('[contacts] 별표를 못 읽었습니다', e); }
+
+    myFaces = await AL.myFaceMap();   // 🔴 2026-09-13 — 내 별칭 사진
+
+    /* 🔴 2026-09-17 — 켜져 있을 때만 읽습니다.
+       꺼져 있으면 서버에 묻지도 않습니다. 안 볼 것을 왜 가져옵니까. */
+    previewOn = await AL.previewOn();
+    previews = previewOn ? await AL.loadPreviews() : {};
+
+    /* 가린 관계를 기억해 둡니다. ⋯ 메뉴의 글씨가 갈립니다. */
+    hidden = {};
+    rows.forEach(function(r){ hidden[r.link_id] = false; });
+    try {
+      var hs = await AL.sb.from('link_sides').select('link_id, hide_preview');
+      (hs.data || []).forEach(function(x){
+        if (x.hide_preview) hidden[x.link_id] = true;
+      });
+    } catch (e) {}
+
+    paint();
+    loadTemp();   // 🔴 2026-10-01 임시연락처 묶음 — 연락처를 읽은 뒤(로그인 확인 뒤)
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+/* ── 🔴 2026-10-01 임시연락처 입구 · [임시] 묶음 ─────────────────────
+   my_temp_cards() — 살아 있는 것만(끝나지 않았고 기한 전) 묶어 보여줍니다.
+   ⚠ 못 읽어도 연락처 목록은 그대로 그립니다(입구만 보임). */
+async function loadTemp(){
+  const ko = AL.lang !== 'en';
+  document.getElementById('tmpEntryT').textContent = ko ? '임시연락처' : 'One-time contact cards';
+  document.getElementById('tmpEntryS').textContent = ko ? '중고거래 · 소개팅 · 매물처럼 잠깐만 쓸 연락처. 정한 날에 저절로 끊깁니다.'
+                                                       : 'For a deal, a first meeting or a listing — cuts off on the date you choose.';
+  const nb = document.getElementById('tmpNew');
+  nb.textContent = ko ? '+ 만들기' : '+ New';
+  if (!nb.dataset.on) { nb.dataset.on = '1';
+    nb.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); location.href = 'burum_temp.html?new=1'; }); }
+  try {
+    const r = await AL.sb.rpc('my_temp_cards');
+    if (r.error) throw r.error;
+    const now = Date.now();
+    const live = (r.data || []).filter(function(c){ return !c.ended_at && Date.parse(c.expires_at) > now; });
+    if (!live.length) { document.getElementById('tmpGroup').style.display = 'none'; return; }
+    const unread = live.reduce(function(a, c){ return a + (c.unread || 0); }, 0);
+    document.getElementById('tmpGroupH').textContent = (ko ? '임시 · ' : 'One-time · ') + live.length + (unread ? (ko ? ' · 새 문자 ' : ' · new ') + unread : '');
+    document.getElementById('tmpList').innerHTML = live.slice(0, 20).map(function(c){
+      const until = new Date(c.expires_at).toLocaleDateString(ko ? 'ko-KR' : 'en-US', { month: 'short', day: 'numeric' });
+      const sub = (ko ? (c.people || 0) + '명 연락 · ' + until + '까지' : (c.people || 0) + ' contacted · until ' + until);
+      return '<a class="tmp-row" href="burum_temp.html"><span class="tmp-av">🎫</span><span class="nm">' + AL.esc(c.label || c.code || '') +
+             '<span class="sub">' + AL.esc(sub) + '</span></span>' +
+             (c.unread ? '<span class="dot">' + AL.esc(c.unread > 99 ? '99+' : c.unread) + '</span>' : '') + '</a>';
+    }).join('');
+    document.getElementById('tmpGroup').style.display = '';
+  } catch (e) { console.warn('[contacts] 임시연락처를 못 읽었습니다', e); }
+}
+
+/* ── 도구 ───────────────────────────────────────────────────── */
+document.getElementById('q').addEventListener('input', paint);
+document.getElementById('grpBtn').addEventListener('click', function(){
+  grouped = !grouped;
+  this.classList.toggle('on', grouped);
+  paint();
+});
+
+function showAdd(on){
+  document.getElementById('addBg').classList.toggle('show', on);
+  document.getElementById('addSheet').style.display = on ? '' : 'none';
+}
+document.getElementById('plus').addEventListener('click', function(){ showAdd(true); });
+if (AL.lang === 'en') {   // 🔴 2026-10-07
+  document.getElementById('addNickT').textContent = '📨 Request by nickname';
+  document.getElementById('addNickS').textContent = 'Just their nickname — in the app, no number shown';
+  document.getElementById('qNick').textContent = 'Request by nickname';
+}
+document.getElementById('addBg').addEventListener('click', function(){ showAdd(false); });
+
+/* 🔴 2026-10-23 — 첫 화면을 부름 번호판으로 할지 한 번만 묻습니다(별칭을 만든 분께만).
+   [예] 다음부터 로그인하면 alias_phone.html?mode=dial · [아니요] 지금처럼. MyPage 에서 언제든 바꿈. 이 폰에만 저장 */
+async function askFirstScreen(){
+  try { if (localStorage.getItem('burum_first_screen')) return; } catch (e) { return; }
+  let al = [];
+  try { al = await AL.loadAliases(); } catch (e) { return; }
+  if (!al || !al.length) return;
+  const KRc = AL.lang !== 'en';
+  const A = KRc ? { t: '📞 첫 화면을 부름 번호판으로 할까요?', p: '로그인하면 번호판(부름번호 · 단축다이얼 · 음성 · 영상 · 문자)이 먼저 나오고, 연락처는 그 아래에 그대로 있습니다. MyPage 에서 언제든 바꿀 수 있어요.', k: '※ 이 선택은 이 휴대폰에 저장됩니다. 앱을 업데이트하거나 로그아웃해도 그대로이고, 앱을 지웠다 다시 설치하거나 · 앱 데이터를 삭제하거나 · 휴대폰을 바꾸면 한 번 다시 고르시면 됩니다.', y: '번호판으로 할게요', s: '먼저 구경하기', n: '지금처럼 연락처로' }
+                : { t: '📞 Start with the Burum dial pad?', p: 'After you log in, the dial pad (Burum number · speed dial · voice · video · text) comes first, with your contacts below. Change it any time in MyPage.', k: '※ Saved on this phone. It stays after app updates and logouts; after reinstalling, clearing app data or changing phones, just choose again once.', y: 'Yes, dial pad', s: 'Take a look', n: 'Keep contacts first' };
+  const host = document.createElement('div');
+  host.style.cssText = 'margin:0 0 12px;padding:14px 15px;border-radius:16px;background:rgba(143,227,176,.12);border:1.5px solid rgba(143,227,176,.5);word-break:keep-all';
+  const bs = 'margin:0;padding:10px 14px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;border:1px solid rgba(128,128,128,.35);background:rgba(255,255,255,.07);color:inherit';
+  host.innerHTML = '<div style="font-size:15.5px;font-weight:800">' + AL.esc(A.t) + '</div><div style="margin:6px 0 6px;font-size:13px;opacity:.85;line-height:1.6">' + AL.esc(A.p) + '</div>' +
+    '<div style="margin:0 0 10px;font-size:11.5px;opacity:.7;line-height:1.55">' + AL.esc(A.k) + '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="fsY" style="' + bs + ';background:#8FE3B0;color:#0E1621;border:none">' + AL.esc(A.y) + '</button>' +
+    '<button type="button" id="fsS" style="' + bs + '">' + AL.esc(A.s) + '</button><button type="button" id="fsN" style="' + bs + '">' + AL.esc(A.n) + '</button></div>';
+  const anchor = document.getElementById('rqTop') || document.body.firstElementChild;
+  anchor.parentNode.insertBefore(host, anchor);
+  document.getElementById('fsY').onclick = function(){ try { localStorage.setItem('burum_first_screen', 'dial'); } catch (e) {} location.href = 'alias_phone.html?mode=dial'; };
+  document.getElementById('fsS').onclick = function(){ location.href = 'alias_phone.html?mode=dial'; };
+  document.getElementById('fsN').onclick = function(){ try { localStorage.setItem('burum_first_screen', 'contacts'); } catch (e) {} host.remove(); };
+}
+
+/* 알림은 공용(AL.startAlerts)이 냅니다. 여기서는 목록만 다시 그립니다. */
+
+(async function(){
+  AL.paintText();
+  document.getElementById('sortBtn').textContent = sortLabel();   // 🔴 2026-09-12
+  if (!await AL.requireLogin()) return;
+  await reload();
+
+  AL.showPlanBar();   // 🔴 2026-09-14 — 체험·만료 띠
+  try { askFirstScreen(); } catch (e) {}   // 🔴 2026-10-23 첫 화면 고르기(한 번만)
+  AL.showDeletionBar();   // 🔴 2026-09-22 — 삭제 예약이면 알림
+  AL.showPushBar();   // 🔴 2026-09-15 — 전화를 못 받는 상태면 알립니다
+  AL.showExpiringBar();   // 🔴 2026-09-19 — 곧 지워질 녹음
+
+  AL.startAlerts({
+    onMessage: function(){ reload(); return false; },  // 소리는 공용이 냅니다
+    onPoll: function(){ reload(); },
+    pollMs: 15000,
+  });
+
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') reload();
+  });
+
+  // 어느 화면에 있든 걸려온 전화를 받습니다.
+  // ⚠ 앱이 켜져 있을 때만 됩니다. 잠금화면은 3단계(FCM)의 일입니다.
+  AL.watchIncoming(function(c){
+    AL.alertNew();
+    location.href = 'alias_call.html?call=' + encodeURIComponent(c.call_id) +
+      '&token=' + encodeURIComponent(c.session_token) +
+      '&link=' + encodeURIComponent(c.link_id) +
+      '&type=' + encodeURIComponent(c.call_type) +
+      '&once=' + encodeURIComponent(c.call_id);
+  });
+})();
+</script>
+<script>
+/* =====================================================================
+   🔴🔴 2026-10-19 — 첫 접속을 쉽게 (손님: "가입자가 편하게 들어와 바로 누군가와 이어지게")
+   ① 받은 닉네임 연결 요청 → 연락처 맨 위에 큰 카드, [수락] 한 번이면 바로 대화방으로
+      (별칭이 하나뿐이면 고르는 단계도 건너뜁니다)
+   ② 1:1 연락처가 하나도 없으면 → 환영 카드: 내 닉네임(복사) · 초대 링크 · 닉네임 요청 · 초대 코드
+   ⚠ 못 읽어도 연락처 화면은 그대로입니다(조용히 넘어감)
+   ===================================================================== */
+(function(){
+  const ko = AL.lang !== 'en';
+  const L = (k, e) => ko ? k : e;
+  const box = (id) => document.getElementById(id);
+  const card = 'border-radius:16px;padding:14px 15px;margin:0 0 12px;word-break:keep-all;';
+  const btnS = 'margin:0;padding:11px 14px;border-radius:12px;font-size:14.5px;font-weight:800;cursor:pointer;border:1px solid rgba(128,128,128,.35);background:rgba(255,255,255,.07);color:inherit';
+  const goS  = 'margin:0;padding:11px 16px;border-radius:12px;font-size:14.5px;font-weight:800;cursor:pointer;border:none;background:#8FE3B0;color:#0E1621';
+
+  async function myAlias(note){
+    let list = [];
+    try { list = await AL.loadAliases(); } catch (e) {}
+    if (list.length === 1) return list[0];
+    return await AL.pickAlias({ note: note });
+  }
+
+  async function paintRequests(){
+    const host = box('rqTop'); if (!host) return;
+    let rows = [];
+    try { const r = await AL.sb.rpc('nick_requests_inbox'); rows = (r && r.data) || []; } catch (e) { rows = []; }
+    if (!rows.length) { host.innerHTML = ''; return; }
+    const shown = rows.slice(0, 3);
+    host.innerHTML = shown.map(x =>
+      '<div style="' + card + 'background:rgba(242,201,76,.13);border:1.5px solid rgba(242,201,76,.6)">' +
+        '<div style="font-size:16px;font-weight:800">📨 ' + AL.esc(x.from_name || L('(이름 없음)', '(no name)')) + L('님이 연결을 원합니다', ' wants to connect') + '</div>' +
+        (x.note ? '<div style="font-size:13.5px;opacity:.85;margin-top:4px">“' + AL.esc(x.note) + '”</div>' : '') +
+        '<div style="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap">' +
+          '<button type="button" style="' + goS + '" data-rq-ok="' + AL.esc(x.id) + '">' + L('수락하고 대화하기', 'Accept & chat') + '</button>' +
+          '<button type="button" style="' + btnS + '" data-rq-no="' + AL.esc(x.id) + '">' + L('거절', 'Decline') + '</button>' +
+        '</div></div>').join('') +
+      (rows.length > shown.length ? '<a href="alias_requests.html" style="display:block;text-align:center;margin:-4px 0 12px;font-size:13.5px;font-weight:700">' +
+        L('받은 요청 ' + rows.length + '건 모두 보기 ›', 'See all ' + rows.length + ' requests ›') + '</a>' : '');
+    host.querySelectorAll('[data-rq-ok]').forEach(b => b.onclick = async () => {
+      const p = await myAlias(L('이 분에게 보일 내 별칭을 고르세요', 'Choose the alias this person will see'));
+      if (!p) return;
+      b.disabled = true;
+      const r = await AL.sb.rpc('nick_request_answer', { p_id: b.dataset.rqOk, p_answer: 'accept', p_persona: p.id, p_label: null });
+      const out = (r && r.data) || {};
+      if (r.error || !out.ok) { b.disabled = false; alert(out.error === 'gone' ? L('보낸 분이 별칭을 지워 연결할 수 없습니다.', 'The sender removed that alias.') : L('연결하지 못했습니다. 잠시 뒤 다시 해 주세요.', 'Could not connect. Please try again.')); return; }
+      location.href = 'alias_chat.html?link=' + encodeURIComponent(out.link_id);
+    });
+    host.querySelectorAll('[data-rq-no]').forEach(b => b.onclick = async () => {
+      if (!confirm(L('이 요청을 거절할까요? 상대에게는 따로 알리지 않습니다.', 'Decline this request? They will not be told.'))) return;
+      await AL.sb.rpc('nick_request_answer', { p_id: b.dataset.rqNo, p_answer: 'decline', p_persona: null, p_label: null });
+      paintRequests();
+    });
+  }
+
+  async function paintWelcome(rows){
+    const host = box('welcome'); if (!host) return;
+    const people = (rows || []).filter(r => r.kind !== 'group');
+    if (people.length) { host.style.display = 'none'; return; }
+    let nick = '';
+    try { const s = (await AL.sb.auth.getSession()).data.session; nick = s.user.email ? decodeURIComponent(String(s.user.email).split('@')[0]) : ''; } catch (e) {}
+    const big = 'display:flex;align-items:center;gap:12px;padding:14px 14px;border-radius:14px;margin:0 0 9px;text-decoration:none;color:inherit;' +
+                'background:rgba(255,255,255,.06);border:1px solid rgba(128,128,128,.35)';
+    host.innerHTML = '<div style="' + card + 'background:rgba(143,227,176,.10);border:1.5px solid rgba(143,227,176,.5)">' +
+      '<div style="font-size:19px;font-weight:800">👋 ' + L('부름에 오신 것을 환영합니다', 'Welcome to Burum') + '</div>' +
+      '<div style="font-size:14px;opacity:.85;margin:5px 0 12px;line-height:1.6">' +
+        L('아는 사람과 한 번만 이어지면 바로 대화 · 전화할 수 있어요. 아래 셋 중 하나만 하시면 됩니다.', 'Connect with someone once and you can chat and call right away. Just pick one below.') + '</div>' +
+      '<a href="alias_invite.html" style="' + big + '"><span style="font-size:26px">📤</span><span><b style="font-size:15.5px">' + L('내 초대 링크 보내기', 'Send my invite link') + '</b><br><small style="opacity:.75">' +
+        L('카톡 · 문자로 보내면, 상대가 누르고 가입하는 순간 바로 이어집니다', 'Send by text — when they tap it and sign up, you\'re connected') + '</small></span></a>' +
+      '<a href="alias_requests.html" style="' + big + '"><span style="font-size:26px">📨</span><span><b style="font-size:15.5px">' + L('닉네임으로 연결 요청', 'Request by nickname') + '</b><br><small style="opacity:.75">' +
+        L('상대 닉네임을 알면 바로 요청 · 상대가 수락하면 이어집니다', 'Know their nickname? Send a request — connected when they accept') + '</small></span></a>' +
+      '<a href="alias_join.html" style="' + big + '"><span style="font-size:26px">📥</span><span><b style="font-size:15.5px">' + L('받은 초대 코드 넣기 · QR 찍기', 'Enter an invite code · scan QR') + '</b><br><small style="opacity:.75">' +
+        L('코드를 받았거나, QR 을 직접 찍거나, 사진 · 캡처로 받은 QR 도 여기서', 'A code, a QR to scan, or a QR photo / screenshot you received') + '</small></span></a>' +
+      (nick ? '<div style="margin-top:10px;font-size:13.5px;line-height:1.6;opacity:.9">' + L('내 닉네임', 'My nickname') + ': <b id="wNick">' + AL.esc(nick) + '</b> ' +
+        '<button type="button" id="wCopy" style="margin:0 0 0 4px;padding:4px 10px;border-radius:8px;font-size:12.5px;cursor:pointer;background:transparent;color:inherit;border:1px solid rgba(128,128,128,.45)">' + L('복사', 'Copy') + '</button>' +
+        '<br><small style="opacity:.75">' + L('이 닉네임을 알려 주면, 상대가 나에게 연결 요청을 보낼 수 있어요. 요청이 오면 이 화면 맨 위에 바로 뜹니다.', 'Share it so people can send you a request — it shows up right here at the top.') + '</small></div>' : '') +
+      '</div>';
+    host.style.display = 'block';
+    const c = box('wCopy');
+    if (c) c.onclick = async () => { try { await navigator.clipboard.writeText(nick); c.textContent = L('복사됨 ✓', 'Copied ✓'); } catch (e) { prompt(L('복사해 주세요', 'Copy this'), nick); } };
+  }
+
+  window.bnOnboard = function(rows){ paintRequests(); paintWelcome(rows); };
+  /* 화면에 돌아올 때마다 요청을 다시 봅니다(알림을 보고 돌아온 경우) */
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') paintRequests(); });
+})();
+</script>
+</body>
+</html>

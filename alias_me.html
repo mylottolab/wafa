@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>부름</title>
+<link rel="stylesheet" href="alias_common.css?v=20260928b">
+<link rel="stylesheet" href="alias_theme.css?v=20261021d">
+<script src="alias_config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="alias_common.js?v=20261114a"></script>
+<script src="burum_partner_ref.js?v=20261029"></script>
+<!-- 🔴 2026-09-13 — 사진 압축(AL.compressImage)이 여기 있습니다 -->
+<script src="alias_media.js?v=20260928b"></script>
+<script>
+/* ⚠ alias_common.js 를 못 읽으면 화면이 텅 빕니다. 글씨를 채우는 것이
+   그 파일이기 때문입니다. 빈 화면만 보면 원인을 알 수가 없어서,
+   여기서 잡아 사람 말로 알려줍니다.
+   가장 흔한 원인은 anon 열쇠 줄이 두 줄로 나뉜 것입니다. */
+document.addEventListener("DOMContentLoaded", function(){
+  if (typeof AL === "undefined" || typeof AL.t !== "function") {
+    document.body.innerHTML =
+      '<div style="padding:26px;font-family:system-ui,sans-serif;line-height:1.8;' +
+      'color:#DDE5F0;background:#0E1621;min-height:100vh">' +
+      '<b style="font-size:17px">alias_common.js 를 못 읽었습니다.</b><br><br>' +
+      '가장 흔한 원인은 anon 열쇠 줄이 두 줄로 나뉜 것입니다.<br>' +
+      'alias_common.js 20번 줄이 한 줄인지 확인하세요.<br><br>' +
+      '<span style="color:#7E8FA6">F12 → Console 에 진짜 원인이 찍힙니다.</span></div>';
+    return;
+  }
+  AL.bootTheme();
+});
+</script>
+<style>
+/* 🔴 2026-09-13 — 사진 넣기 창 */
+#faceBg{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6)}
+#faceBox{display:none;position:fixed;z-index:81;left:50%;top:50%;
+  transform:translate(-50%,-50%);width:min(420px,90vw);max-height:82vh;overflow:auto;
+  padding:20px;border-radius:18px;background:#1B2430;color:#DDE5F0;
+  border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 44px rgba(0,0,0,.6)}
+#faceBox .fh{font-size:17px;font-weight:800;line-height:1.5;margin-bottom:12px;color:#F2C94C}
+#faceBox .fw{font-size:14.5px;line-height:1.7;margin:0 0 12px}
+#faceBox .fl{margin:0 0 14px;padding-left:20px;font-size:14px;line-height:1.75;opacity:.9}
+#faceBox .fl li{margin-bottom:7px}
+#faceBox .fa{font-size:14px;line-height:1.7;margin:0 0 18px;padding:11px 14px;
+  border-radius:11px;background:rgba(143,227,176,.14);color:#8FE3B0}
+/* 🔴 2026-09-13 — "지금 사진" 자리. 경고문 위에 둡니다. */
+#faceBox .fnow{text-align:center;margin:0 0 18px;padding-bottom:16px;
+  border-bottom:1px solid rgba(255,255,255,.12)}
+#faceBox .fnow .fp{margin:0 0 8px}
+#faceBox .fn{margin:0;font-size:13.5px;opacity:.75}
+#faceBox .fp{text-align:center;margin:0 0 16px}
+#faceBox .fp img{width:150px;height:150px;object-fit:cover;border-radius:50%;
+  border:2px solid rgba(255,255,255,.25)}
+#faceBox .fb{display:flex;gap:10px}
+#faceBox .fb button{flex:1;margin:0;padding:14px 4px;border-radius:12px;font-size:14.5px;
+  white-space:nowrap;
+  font-weight:700;cursor:pointer;background:rgba(255,255,255,.08);color:inherit;
+  border:1px solid rgba(255,255,255,.18)}
+#faceBox .fb button.go{background:rgba(143,227,176,.22);color:#8FE3B0;
+  border-color:rgba(143,227,176,.45)}
+/* 지우기는 되돌릴 수 없으니 색으로도 구별합니다. */
+#faceBox .fb button.bad{background:rgba(255,120,120,.16);color:#FFB4B4;
+  border-color:rgba(255,120,120,.4)}
+#faceBox .fp img{background:rgba(255,255,255,.06)}
+.facemark{background-repeat:no-repeat}
+
+/* 🔴 2026-09-13 — 별칭 목록의 얼굴표.
+   공용 CSS 를 안 건드리려고 여기에 둡니다. */
+.facemark{display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;margin-right:9px;flex:0 0 30px;
+  font-weight:800;font-size:14px;vertical-align:middle}
+.row-main{display:flex;align-items:center}
+</style>
+</head>
+<body class="tabbed" data-t-title="ttMe">
+<div class="wrap">
+
+  <div class="tophead">
+    <h1 class="h2" data-t="meTitle"></h1>
+  </div>
+
+  <!-- 🔴 2026-10-31 — 누름 입구(모두에게). 한 사람과만, 바탕화면 아이콘을 누르면 바로.
+       ⚠ 아이폰 앱에서는 애플 심사(누름 결제 상품)가 통과될 때까지 관리자에게만 보입니다(NUREUM_IOS_OPEN). -->
+  <a href="nureum.html" id="nureumEntry"
+     style="display:none;align-items:center;gap:12px;margin:4px 0 14px;padding:12px 14px;border-radius:16px;text-decoration:none;color:inherit;border:1px solid rgba(228,87,46,.55);background:rgba(228,87,46,.08)">
+    <svg width="36" height="36" viewBox="0 0 34 34" aria-hidden="true" style="flex:none"><circle cx="17" cy="17" r="14" fill="none" stroke="#E4572E" stroke-width="3"></circle><circle cx="17" cy="17" r="6.5" fill="#E4572E"></circle></svg>
+    <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+      <b style="font-size:15px">누름 · 한 사람과 바로</b>
+      <span style="font-size:12.5px;opacity:.8">엄마 · 아들 · 우리 자기 — 바탕화면 아이콘을 누르면 바로 전화</span>
+    </span>
+    <span style="margin-left:auto;font-size:20px;opacity:.6">›</span>
+  </a>
+  <script>
+  (function(){
+    var NUREUM_IOS_OPEN = true;    // 🔴 2026-10-31 애플 심사(데모 계정)에서도 보여야 하므로 함께 엽니다
+    var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) && window.AL && AL.isNativeApp && AL.isNativeApp();
+    var el = document.getElementById('nureumEntry');
+    if (!ios || NUREUM_IOS_OPEN) { el.style.display = 'flex'; return; }
+    /* 아이폰 앱: 관리자만 */
+    setTimeout(async function(){
+      try { var ad = await AL.sb.rpc('is_admin'); if (!ad.error && ad.data) el.style.display = 'flex'; } catch (e) {}
+    }, 300);
+  })();
+  </script>
+
+  <!-- 🔴 2026-10-19 — 처음 가입한 분 길잡이(1:1 연락처가 하나도 없을 때만) -->
+  <div id="firstGuide" style="display:none"></div>
+
+  <div class="sect" data-t="meAliases"></div>
+  <p class="lede" data-t="aliasIntro"></p>
+  <ul class="list" id="list"></ul>
+
+  <div class="sect" data-t="aliasNew"></div>
+  <div class="field">
+    <label for="name" data-t="aliasNameLbl"></label>
+    <input id="name" type="text" maxlength="20" autocomplete="off">
+    <p class="hint" data-t="aliasNameHint"></p>
+  </div>
+  <button class="btn" id="make" data-t="aliasNew"></button>
+
+  <div id="err" class="err"></div>
+<input type="file" id="facePick" accept="image/*" style="display:none">
+<div id="faceBg"></div>
+<div id="faceBox"></div>
+  <div id="ok" class="ok"></div>
+
+  <div class="dblock">
+    <div class="drow">
+      <span class="dlab" data-t="kpTitle"></span>
+      <span class="dval"><a class="rowlink" href="alias_keep.html" data-t="mdOpenFile"></a></span>
+    </div>
+  </div>
+
+  <div class="sect" data-t="lgTitle"></div>
+  <div class="swatches" id="swLang"></div>
+  <p class="hint" data-t="lgNote"></p>
+
+  <div class="sect" data-t="thTitle"></div>
+
+  <div class="field">
+    <label data-t="thMode"></label>
+    <div class="swatches" id="swMode"></div>
+  </div>
+  <div class="field">
+    <label data-t="thColor"></label>
+    <div class="swatches" id="swColor"></div>
+  </div>
+  <div class="field">
+    <label data-t="thBubble"></label>
+    <div class="swatches" id="swBubble"></div>
+  </div>
+  <div class="field">
+    <label data-t="thScene"></label>
+    <div class="swatches" id="swScene"></div>
+    <p class="hint" data-t="thSceneNote"></p>
+  </div>
+  <!-- 🔴 2026-09-19 신설 — 글씨 크기·굵기
+       ⚠ "읽기 불편하다" 는 말씀에는 색보다 이쪽이 크게 듣습니다. -->
+  <div class="field">
+    <label data-t="fsTitle"></label>
+    <div class="swatches" id="swFs"></div>
+  </div>
+  <div class="field">
+    <label data-t="fwTitle"></label>
+    <div class="swatches" id="swFw"></div>
+    <p class="hint" data-t="fsNote"></p>
+  </div>
+  <!-- 🔴 2026-09-19 신설 — 글씨체 (폰에 있는 것만) -->
+  <div class="field">
+    <label data-t="ffTitle"></label>
+    <div class="swatches" id="swFf"></div>
+    <p class="hint" data-t="ffNote"></p>
+  </div>
+
+  <div class="preview">
+    <div class="msg in"><div class="bub" data-t="thSample1"></div></div>
+    <div class="msg out"><div class="bub" data-t="thSample2"></div></div>
+  </div>
+
+  <!-- 🔴 데이터를 얼마나 쓰는지 보여줍니다. 모르는 게 불안한 것입니다. -->
+  <div class="sect" data-t="dtTitle"></div>
+  <p class="lede" data-t="dtNote"></p>
+
+  <div class="dblock" id="usage"></div>
+
+  <div class="sect" data-t="dtSave"></div>
+  <div class="dblock">
+    <div class="prefrow">
+      <span class="pl"><b data-t="dtVideoWifi"></b>
+        <span class="ps" data-t="dtVideoWifiD"></span></span>
+      <button id="pVideoWifi"></button>
+    </div>
+    <div class="prefrow">
+      <span class="pl"><b data-t="dtLowRate"></b>
+        <span class="ps" data-t="dtLowRateD"></span></span>
+      <button id="pLowRate"></button>
+    </div>
+    <div class="prefrow">
+      <span class="pl"><b data-t="dtMediaWifi"></b>
+        <span class="ps" data-t="dtMediaWifiD"></span></span>
+      <button id="pMediaWifi"></button>
+    </div>
+    <div class="prefrow">
+      <span class="pl"><b data-t="dtWarn"></b>
+        <span class="ps" data-t="dtWarnD"></span></span>
+      <button id="pWarn"></button>
+    </div>
+  </div>
+
+  <div class="sect" data-t="prefTitle"></div>
+  <p class="lede" data-t="prefNote"></p>
+  <div class="dblock">
+    <div class="prefrow">
+      <span class="pl" data-t="prefSound"></span>
+      <button id="pSound"></button>
+    </div>
+    <div class="prefrow">
+      <span class="pl" data-t="prefVibrate"></span>
+      <button id="pVib"></button>
+    </div>
+    <!-- 🔴 2026-09-17 신설 — 연락처에 최근 대화 보이기 -->
+    <div class="prefrow">
+      <span class="pl" data-t="pvTitle"></span>
+      <button id="pPrev"></button>
+    </div>
+    <p class="hint" data-t="pvNote" style="margin:8px 2px 0"></p>
+    <!-- 🔴 2026-10-23 첫 화면: 연락처 / 부름 번호판 (이 폰에만) -->
+    <div class="prefrow">
+      <span class="pl" id="fsLbl"></span>
+      <button id="pFirst"></button>
+    </div>
+    <p class="hint" id="fsNote" style="margin:8px 2px 0"></p>
+  </div>
+
+  <!-- 🔴 2026-09-20 신설 — 이용권
+       ⚠ 띠는 화면마다 떴다 사라지지만, 여기는 **늘 있는 집**입니다.
+         손님이 "이용권이 어디 있더라" 할 때 찾아올 자리가 있어야 합니다. -->
+  <div class="sect" data-t="plTitle"></div>
+  <div class="dblock">
+    <div class="prefrow">
+      <span class="pl" id="planNow"></span>
+      <a href="alias_buy.html" id="planGo"
+         style="padding:9px 16px;border-radius:999px;text-decoration:none;
+                font-size:13.5px;font-weight:700;
+                background:rgba(143,227,176,.2);color:#8FE3B0;
+                border:1px solid rgba(143,227,176,.45)"></a>
+    </div>
+    <p class="hint" data-t="plNote2"></p>
+  </div>
+
+  <!-- 🔴 2026-09-28 신설 — 저장 공간
+       ⚠ 추가 용량을 사고, 묶음마다 끝나는 날을 보고, 넘쳤으면 언제 무엇이
+         지워지는지 알 수 있는 자리입니다. 누르면 alias_storage.html -->
+  <div class="sect" data-t="sgTitle"></div>
+  <div class="dblock">
+    <div class="prefrow">
+      <span class="pl" id="storNow"></span>
+      <a href="alias_storage.html" id="storGo" data-t="sgGo"
+         style="padding:9px 16px;border-radius:999px;text-decoration:none;
+                font-size:13.5px;font-weight:700;
+                background:rgba(143,227,176,.2);color:#8FE3B0;
+                border:1px solid rgba(143,227,176,.45)"></a>
+    </div>
+    <p class="hint" id="storOver" style="display:none;color:#FFB4B4"></p>
+  </div>
+
+  <!-- 🔴🔴 2026-10-01 신설 — 두 앱 잇기 (1단계: 서로 안내)
+       차 · 물건 · 아이 · 반려동물에 붙이는 QR 긴급연락은 에일리어스콜의 일입니다.
+       부름 손님이 그것이 필요할 때 찾아갈 수 있게 늘 같은 자리에 둡니다.
+       ⚠ 글은 아래 스크립트가 언어에 맞춰 채웁니다(공용 사전을 건드리지 않으려고). -->
+  <!-- 🔴 2026-10-29 신설 — 유치대리점: 추천 코드 넣기 · 모집 안내 (burum_partner_ref.js 가 채움) -->
+  <div class="sect" id="prSect" style="display:none">추천 대리점</div>
+  <div class="dblock" id="prBox" style="display:none"></div>
+
+  <div class="sect" id="acSect">함께 쓰면 좋은 앱</div>
+  <div class="dblock">
+    <a class="prefrow" id="acPromo" href="https://play.google.com/store/apps/details?id=com.weaveapp.aliascall"
+       target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+      <span class="pl"><b id="acPromoT">🚗 차 · 물건 · 아이 · 반려동물에 QR이 필요하세요?</b>
+        <span class="ps" id="acPromoD">발견한 분이 번호를 몰라도 바로 연락할 수 있게 — 에일리어스콜</span></span>
+      <span id="acPromoGo"
+         style="padding:9px 16px;border-radius:999px;white-space:nowrap;
+                font-size:13.5px;font-weight:700;
+                background:rgba(143,227,176,.2);color:#8FE3B0;
+                border:1px solid rgba(143,227,176,.45)">보러 가기 ›</span>
+    </a>
+  </div>
+
+  <!-- 🔴 2026-09-20 — 관리자에게만 보입니다 -->
+  <div id="adminBox" style="display:none">
+    <div class="sect" data-t="adTitle"></div>
+    <div class="dblock">
+      <a href="alias_admin.html" class="btn ghost" data-t="adMenu"
+         style="display:block;text-align:center;text-decoration:none"></a>
+    </div>
+  </div>
+
+  <div class="sect" data-t="meAccount"></div>
+  <div class="dblock">
+    <div class="drow">
+      <span class="dlab" data-t="meAccountId"></span>
+      <span class="dval code small" id="uid"></span>
+    </div>
+  </div>
+
+  <!-- ⚠ 로그아웃은 맨 아래, 눈에 덜 띄게 둡니다.
+       머리에 두면 헤매다 누르고, 다시 로그인해야 합니다. -->
+  <div class="signout-zone">
+    <button id="out" data-t="signOut"></button>
+  </div>
+
+  <!-- 🔴 2026-09-22 — 계정 삭제
+       ⚠ 애플·구글 모두 "앱 안에서 찾을 수 있는 자리" 를 요구합니다.
+         로그아웃처럼 맨 아래, 눈에 덜 띄게 둡니다. 숨기면 반려됩니다. -->
+  <div style="text-align:center;margin:18px 0 6px">
+    <a href="alias_delete.html" data-t="dlMenu"
+       style="font-size:13px;color:#94A3B8;text-decoration:underline"></a>
+  </div>
+<!-- =====================================================================
+     🔴 2026-09-22 신설 — 사업자 정보와 문서
+
+     ⚠ 전자상거래법은 상호·대표자·주소·사업자등록번호·통신판매업 신고번호·
+       연락처를 **초기화면에** 표시하도록 정하고 있습니다.
+     ⚠ 개인정보처리방침은 다른 글씨와 **구분되게** 표시해야 합니다(진하게).
+     ⚠ 구글·애플 심사관이 로그인 없이 봐야 하므로 첫 화면에 둡니다.
+     ===================================================================== -->
+<footer style="max-width:560px;margin:34px auto 0;padding:20px 18px 34px;
+  border-top:1px solid rgba(128,128,128,.25);font-size:12px;line-height:1.95;
+  opacity:.72;word-break:keep-all;text-align:center">
+  위브앱솔루션 · 대표 이미화 · 사업자등록번호 206-08-71754<br>
+  통신판매업신고 2022-수원권선-1701<br>
+  경기도 수원시 권선구 수성로47 10동 501호<br>
+  010-9237-9042 · weapps.kr@gmail.com<br>
+  <a href="support.html" style="color:inherit;font-weight:800">💬 고객센터 (자동 답변 · 1:1 문의)</a><br>
+  <a href="dangol.html" style="color:inherit;font-weight:800">🏪 단골창구 — 가게에 번호 없이 묻기</a><br>
+  <a href="https://www.youtube.com/@weveapp" target="_blank" rel="noopener" style="color:inherit">📺 사용법 영상(유튜브)</a> · <a href="https://www.instagram.com/weveapp_kr/" target="_blank" rel="noopener" style="color:inherit">인스타</a> · <a href="https://x.com/weveapp_kr" target="_blank" rel="noopener" style="color:inherit">X</a> · <a href="https://www.tiktok.com/@weveapp" target="_blank" rel="noopener" style="color:inherit">틱톡</a>
+  <div style="margin-top:12px">
+    <a href="burum_terms.html" style="color:inherit">이용약관</a> ·
+    <a href="burum_privacy.html" style="color:inherit;font-weight:800">개인정보처리방침</a> ·
+    <a href="burum_refund.html" style="color:inherit">취소·환불 규정</a> ·
+    <a href="burum_guide.html" style="color:inherit">사용설명서</a><span class="pr-promo"> ·
+    <a href="https://aliascall.com/aliascall_partner.html" target="_blank" rel="noopener" style="color:inherit;font-weight:700">유치대리점 모집</a></span>
+  </div>
+</footer>
+
+
+</div>
+
+<nav class="tabbar">
+  <a href="alias_contacts.html" data-t="navContacts"></a>
+  <a href="alias_calls.html" data-t="navCalls"></a>
+  <a href="alias_me.html" class="on" data-t="navMe"></a>
+</nav>
+
+<script>
+/* =====================================================================
+   나 — 별칭 관리 + 계정
+   ⚠ 여기 있는 별칭은 전부 내가 만든 것입니다. 남이 넣을 수 없습니다.
+     personas 정책이 account_id = auth.uid() 로 막고 있습니다.
+   ===================================================================== */
+
+let me = null;
+let aliases = [];
+
+function showErr(msg){
+  const el = document.getElementById('err');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('ok').classList.remove('show');
+}
+function showOk(msg){
+  const el = document.getElementById('ok');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('err').classList.remove('show');
+}
+function clearMsg(){
+  document.getElementById('err').classList.remove('show');
+  document.getElementById('ok').classList.remove('show');
+}
+
+function paintList(){
+  const ul = document.getElementById('list');
+  if (!aliases.length) {
+    ul.innerHTML = '<li class="empty">' + AL.esc(AL.t('aliasEmpty')) + '</li>';
+    return;
+  }
+  ul.innerHTML = aliases.map(function(a){
+    return '<li class="row">' +
+      '<div class="row-main">' +
+        /* 🔴 2026-09-13 — 별칭 앞에 얼굴표를 답니다.
+           목록에서 색이 갈려 있어야 "여러 개의 나" 가 눈에 들어옵니다. */
+        /* 🔴 2026-09-13 — 사진이 있으면 사진을, 없으면 색 얼굴표를.
+           data-face 에 경로를 달아두면 AL.paintFaces() 가 찾아 칠합니다. */
+        '<span class="facemark"' + AL.faceAttr(a.display_name) +
+          (a.avatar_url ? ' data-face="' + AL.esc(a.avatar_url) + '"' : '') + '>' +
+          AL.esc(AL.initial(a.display_name)) + '</span>' +
+        '<span class="row-name">' + AL.esc(a.display_name) + '</span>' +
+        (a.is_default ? '<span class="badge">' + AL.esc(AL.t('aliasDefault')) + '</span>' : '') +
+      '</div>' +
+      '<div class="row-acts">' +
+        '<a class="rowlink" href="alias_invite.html?face=' + encodeURIComponent(a.id) + '">' +
+          AL.esc(AL.t('aliasUseForInvite')) + '</a>' +
+        /* 🔴 2026-09-13 — 단추 하나로 모읍니다.
+           누르면 "지금 사진 · 바꾸기 · 지우기" 가 한 창에 다 나옵니다.
+           줄에 단추를 셋 넷 늘어놓으면 좁은 폰에서 찌그러집니다(함정 81). */
+        /* 🔴 2026-10-01 — 이름 바꾸기 (에일리어스콜에서 이어온 "AliascallN" 도 여기서 바꿉니다) */
+        '<button data-rename="' + AL.esc(a.id) + '">' + AL.esc(AL.lang === 'en' ? 'Rename' : '이름 바꾸기') + '</button>' +
+        '<button data-face-btn="' + AL.esc(a.id) + '">' +
+          AL.esc(AL.t(a.avatar_url ? 'faceChange' : 'faceAdd')) + '</button>' +
+        /* 🔴 2026-09-15 — 이 별칭의 초대를 바로 뽑으러 갑니다.
+           초대 화면까지 가서 다시 찾는 수고를 덜어줍니다. */
+        '<button data-qr="' + AL.esc(a.id) + '">' +
+          AL.esc(AL.t('qrPrint')) + '</button>' +
+        /* 🔴 2026-09-18 — 이 별칭의 갤러리를 꾸미러 갑니다. */
+        '<button data-gal="' + AL.esc(a.id) + '">' +
+          AL.esc(AL.t('glTitle')) + '</button>' +
+        (a.is_default ? '' :
+          '<button data-def="' + AL.esc(a.id) + '">' + AL.esc(AL.t('aliasMakeDef')) + '</button>') +
+      '</div>' +
+    '</li>';
+  }).join('');
+
+  ul.querySelectorAll('[data-rename]').forEach(function(b){
+    b.addEventListener('click', function(){ renameAlias(b.getAttribute('data-rename')); });
+  });
+  ul.querySelectorAll('[data-def]').forEach(function(b){
+    b.addEventListener('click', function(){ makeDefault(b.getAttribute('data-def')); });
+  });
+  ul.querySelectorAll('[data-gal]').forEach(function(b){
+    b.addEventListener('click', function(){
+      location.href = 'alias_gallery.html?p=' +
+        encodeURIComponent(b.getAttribute('data-gal')) + '&edit=1';
+    });
+  });
+  ul.querySelectorAll('[data-qr]').forEach(function(b){
+    b.addEventListener('click', function(){
+      location.href = 'alias_invite.html?face=' +
+        encodeURIComponent(b.getAttribute('data-qr')) + '&print=1';
+    });
+  });
+  ul.querySelectorAll('[data-face-btn]').forEach(function(b){
+    b.addEventListener('click', function(){ startFace(b.getAttribute('data-face-btn')); });
+  });
+
+  /* 🔴 2026-09-13 — 글자를 먼저 그려두고 사진은 오는 대로 덮어씁니다.
+     서랍이 비공개라 주소를 받아오는 데 잠깐 걸립니다.
+     기다렸다 그리면 화면이 비어 보입니다. */
+  AL.paintFaces(ul);
+}
+
+/* =====================================================================
+   🔴🔴 2026-09-13 신설 — 별칭 사진 넣기
+
+   순서가 셋입니다. 한 번에 올리지 않습니다.
+     ① 경고를 읽는다      — 얼굴 사진이 무엇을 뜻하는지
+     ② 사진을 고른다
+     ③ 몇 명이 보게 되는지 확인하고 올린다
+
+   ⚠ ①을 건너뛰게 만들지 마세요. 이 앱은 얼굴을 감추려고 쓰는 앱인데,
+     사진 한 장으로 그게 무너질 수 있습니다. 손님이 그걸 알고 고르셔야
+     합니다. 막는 게 아니라 알려드리는 것입니다.
+   ===================================================================== */
+let facePersona = null;
+let facePicked = null;
+
+function faceSheet(on){
+  document.getElementById('faceBg').style.display = on ? 'block' : 'none';
+  document.getElementById('faceBox').style.display = on ? 'block' : 'none';
+}
+document.getElementById('faceBg').addEventListener('click', function(){ faceSheet(false); });
+
+/* =====================================================================
+   🔴🔴 2026-09-13 — 사진 넣기 · 교체 · 삭제를 한 창에
+
+   무엇을 바꾸는지 안 보이면 손님이 손을 못 댑니다.
+   "이게 맞나?" 싶은 순간 그만두게 됩니다.
+   그래서 **지금 쓰는 사진을 경고문 위에 먼저 보여줍니다.**
+
+   창은 하나인데 사진이 있느냐 없느냐로 단추가 달라집니다.
+
+     사진 없음   [ 그만두기 ]  [ 알고 있습니다 ]
+     사진 있음   [ 취소하기 ]  [ 삭제하기 ]  [ 교체하기 ]
+
+   ⚠ 사진이 있어도 경고문은 그대로 보여줍니다. 교체도 결국 새로 올리는
+     일이고, 그때마다 무게를 다시 느끼시는 편이 낫습니다.
+   ===================================================================== */
+async function startFace(personaId){
+  facePersona = aliases.filter(function(a){ return a.id === personaId; })[0];
+  if (!facePersona) return;
+  facePicked = null;
+
+  const has = !!facePersona.avatar_url;
+
+  document.getElementById('faceBox').innerHTML =
+    (has ? '<div class="fnow">' +
+             '<div class="fp"><img id="faceNowImg" alt=""></div>' +
+             '<p class="fn">' + AL.esc(AL.t('faceNow')) + '</p>' +
+           '</div>' : '') +
+    '<div class="fh">' + AL.esc(AL.t('faceWarnTtl')) + '</div>' +
+    '<p class="fw">' + AL.esc(AL.t('faceWarn1')) + '</p>' +
+    '<ul class="fl">' +
+      '<li>' + AL.esc(AL.t('faceWarn2')) + '</li>' +
+      '<li>' + AL.esc(AL.t('faceWarn3')) + '</li>' +
+      '<li>' + AL.esc(AL.t('faceWarn4')) + '</li>' +
+    '</ul>' +
+    '<p class="fa">' + AL.esc(AL.t('faceWarnAlt')) + '</p>' +
+    (has
+      ? '<div class="fb">' +
+          '<button id="faceNo">' + AL.esc(AL.t('faceCancel')) + '</button>' +
+          '<button id="faceDel" class="bad">' + AL.esc(AL.t('faceDelBtn')) + '</button>' +
+          '<button id="faceYes" class="go">' + AL.esc(AL.t('faceSwap')) + '</button>' +
+        '</div>'
+      : '<div class="fb">' +
+          '<button id="faceNo">' + AL.esc(AL.t('faceWarnNo')) + '</button>' +
+          '<button id="faceYes" class="go">' + AL.esc(AL.t('faceWarnYes')) + '</button>' +
+        '</div>');
+  faceSheet(true);
+
+  document.getElementById('faceNo').addEventListener('click', function(){ faceSheet(false); });
+  document.getElementById('faceYes').addEventListener('click', function(){
+    document.getElementById('facePick').click();
+  });
+  if (has) {
+    document.getElementById('faceDel').addEventListener('click', function(){
+      faceSheet(false);
+      dropFace(facePersona.id);
+    });
+    /* 서랍이 비공개라 주소를 받아와야 합니다. 창은 먼저 띄우고 사진은
+       오는 대로 채웁니다. 기다렸다 띄우면 느려 보입니다. */
+    AL.faceUrl(facePersona.avatar_url).then(function(url){
+      const img = document.getElementById('faceNowImg');
+      if (img && url) img.src = url;
+    });
+  }
+}
+
+/* ② 고르고 나면 ③ 확인 */
+document.getElementById('facePick').addEventListener('change', async function(){
+  const f = this.files && this.files[0];
+  this.value = '';
+  if (!f || !facePersona) return;
+  facePicked = f;
+
+  const n = await AL.faceAudience(facePersona.id);
+  const url = URL.createObjectURL(f);
+
+  document.getElementById('faceBox').innerHTML =
+    '<div class="fh">' + AL.esc(AL.t('faceConfirm', { face: facePersona.display_name })) + '</div>' +
+    '<div class="fp"><img src="' + url + '" alt=""></div>' +
+    '<p class="fw">' + AL.esc(n > 0 ? AL.t('faceAudience', { n: n }) : AL.t('faceAudience0')) + '</p>' +
+    '<div class="fb">' +
+      '<button id="faceAgain">' + AL.esc(AL.t('faceRetry')) + '</button>' +
+      '<button id="faceGo" class="go">' + AL.esc(AL.t('faceGo')) + '</button>' +
+    '</div>';
+  faceSheet(true);
+
+  document.getElementById('faceAgain').addEventListener('click', function(){
+    document.getElementById('facePick').click();
+  });
+  document.getElementById('faceGo').addEventListener('click', async function(){
+    this.disabled = true;
+    try {
+      /* 🔴 2026-09-13 — 옛 경로를 함께 넘겨 지우게 합니다.
+         안 넘기면 서랍에 옛 사진이 계속 쌓입니다. */
+      await AL.uploadFace(facePersona.id, facePicked, facePersona.avatar_url);
+      faceSheet(false);
+      showOk(AL.t('faceDone') + ' ' + AL.t('faceNote'));
+      await reload();
+    } catch (e) {
+      console.error(e);
+      faceSheet(false);
+      showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+    }
+  });
+});
+
+async function dropFace(personaId){
+  const a = aliases.filter(function(x){ return x.id === personaId; })[0];
+  if (!a) return;
+  /* 🔴 2026-09-13 — 지우면 어떻게 되는지까지 말해줍니다.
+     "지울까요?" 만으로는 사진이 사라지는 건지 별칭이 사라지는 건지
+     헷갈립니다. */
+  if (!confirm(AL.t('faceDelAsk', { face: a.display_name }))) return;
+  try {
+    await AL.removeFace(personaId, a.avatar_url);
+    showOk(AL.t('faceGone'));
+    await reload();
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+async function reload(){
+  try {
+    aliases = await AL.loadAliases();
+    paintList();
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+async function makeAlias(){
+  clearMsg();
+  /* 🔴 2026-09-14 — 별칭 추가는 이용권이 필요합니다.
+     이미 만든 별칭은 그대로 씁니다. 받기도 그대로 됩니다. */
+  if (!await AL.requirePlan()) return;
+  const name = document.getElementById('name').value;
+  const btn = document.getElementById('make');
+  btn.disabled = true;
+  try {
+    // ⚠ 만드는 규칙(길이·중복·첫 별칭은 기본)은 alias_common.js 한 곳에만 둡니다.
+    //   고르개에서 만드는 것과 여기서 만드는 것이 갈리면 안 됩니다.
+    await AL.createAlias(name, aliases);
+    document.getElementById('name').value = '';
+    showOk(AL.t('aliasCreated'));
+    await reload();
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* 🔴 2026-10-01 — 별칭 이름 바꾸기
+   ⚠ 같은 이름을 두 개 둘 수 없습니다(만들 때와 같은 규칙). 1 ~ 20자.
+   ⚠ 이 별칭을 쓰는 모든 대화에서 상대에게 보이는 이름이 함께 바뀝니다. */
+async function renameAlias(id){
+  clearMsg();
+  const a = aliases.filter(function(x){ return x.id === id; })[0];
+  if (!a) return;
+  const en = AL.lang === 'en';
+  let name = prompt(en ? 'New name for "' + a.display_name + '" (1–20 characters)\nEveryone who knows you by this name will see the new one.'
+                       : '"' + a.display_name + '" 의 새 이름 (1 ~ 20자)\n이 이름으로 이어진 분들에게 새 이름이 보입니다.', a.display_name);
+  if (name === null) return;
+  name = name.trim();
+  if (!name || name.length > 20) { showErr(en ? 'Please use 1 to 20 characters.' : '1 ~ 20자로 적어 주세요.'); return; }
+  if (name === a.display_name) return;
+  if (aliases.some(function(x){ return x.id !== id && x.display_name === name; })) {
+    showErr(en ? 'You already have an alias with that name.' : '같은 이름의 별칭이 이미 있습니다.'); return;
+  }
+  try {
+    const up = await AL.sb.from('personas').update({ display_name: name }).eq('id', id).select('id');
+    if (up.error) throw up.error;
+    if (!up.data || !up.data.length) throw new Error(AL.t('errNoRows'));
+    showOk(en ? 'Renamed.' : '이름을 바꿨습니다.');
+    await reload();
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+async function makeDefault(id){
+  clearMsg();
+  try {
+    // ⚠ "계정당 기본은 하나"라는 부분 유니크 인덱스가 걸려 있습니다.
+    //   먼저 다 내리고 나서 하나를 올려야 합니다. 순서를 바꾸면 충돌합니다.
+    const down = await AL.sb.from('personas')
+      .update({ is_default: false }).eq('account_id', me.id).eq('is_default', true);
+    if (down.error) throw down.error;
+    const up = await AL.sb.from('personas').update({ is_default: true }).eq('id', id);
+    if (up.error) throw up.error;
+    await reload();
+  } catch (e) {
+    console.error(e);
+    showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+  }
+}
+
+document.getElementById('make').addEventListener('click', makeAlias);
+document.getElementById('name').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') makeAlias();
+});
+/* ── 데이터 ─────────────────────────────────────────────────── */
+const WARN_STEPS = [0, 200, 500, 1000, 2000];
+
+async function paintUsage(){
+  const box = document.getElementById('usage');
+  const u = await AL.dataUsage(30);
+  if (!u || !u.total_bytes) {
+    box.innerHTML = '<div class="drow"><span class="dlab">' +
+      AL.esc(AL.t('dtUsed30')) + '</span><span class="dval">' +
+      AL.esc(AL.t('dtNone')) + '</span></div>';
+    return;
+  }
+  const secs = Number(u.call_seconds || 0);
+  const dur = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+  box.innerHTML =
+    '<div class="drow"><span class="dlab">' + AL.esc(AL.t('dtUsed30')) + '</span>' +
+      '<span class="dval">' + AL.esc(AL.t('dtTotal', { size: AL.fmtBytes(u.total_bytes) })) + '</span></div>' +
+    '<div class="drow"><span class="dlab">' +
+      AL.esc(AL.t('dtCalls', { n: u.n_calls, dur: dur })) + '</span>' +
+      '<span class="dval">' + AL.esc(AL.fmtBytes(u.call_bytes)) + '</span></div>' +
+    '<div class="drow"><span class="dlab">' +
+      AL.esc(AL.t('dtMedia', { n: u.n_media })) + '</span>' +
+      '<span class="dval">' + AL.esc(AL.fmtBytes(u.media_bytes)) + '</span></div>';
+}
+
+function paintData(){
+  const p = AL.dataPrefs;
+  [['pVideoWifi','video_wifi_only'], ['pLowRate','low_bitrate'],
+   ['pMediaWifi','media_wifi_only']].forEach(function(o){
+    const b = document.getElementById(o[0]);
+    b.textContent = AL.t(p[o[1]] ? 'prefOn' : 'prefOff');
+    b.classList.toggle('on', !!p[o[1]]);
+  });
+  const w = document.getElementById('pWarn');
+  w.textContent = p.warn_mb ? (p.warn_mb + ' MB') : AL.t('dtWarnOff');
+  w.classList.toggle('on', !!p.warn_mb);
+}
+
+[['pVideoWifi','video_wifi_only'], ['pLowRate','low_bitrate'],
+ ['pMediaWifi','media_wifi_only']].forEach(function(o){
+  document.getElementById(o[0]).addEventListener('click', async function(){
+    try { await AL.saveDataPref(o[1], !AL.dataPrefs[o[1]]); paintData(); }
+    catch (e) { console.error(e); showErr(AL.t('errGeneric', { msg: e.message || String(e) })); }
+  });
+});
+
+document.getElementById('pWarn').addEventListener('click', async function(){
+  const i = WARN_STEPS.indexOf(AL.dataPrefs.warn_mb);
+  const next = WARN_STEPS[(i + 1) % WARN_STEPS.length];
+  try { await AL.saveDataPref('warn_mb', next); paintData(); }
+  catch (e) { console.error(e); showErr(AL.t('errGeneric', { msg: e.message || String(e) })); }
+});
+
+/* ── 언어 고르기 ─────────────────────────────────────────────── */
+const LANGS = [['auto','lgAuto'], ['kr','lgKr'], ['en','lgEn']];
+
+function paintLang(){
+  const box = document.getElementById('swLang');
+  box.innerHTML = LANGS.map(function(o){
+    return '<button class="sw' + (AL.langPref === o[0] ? ' on' : '') +
+           '" data-lang="' + AL.esc(o[0]) + '">' + AL.esc(AL.t(o[1])) + '</button>';
+  }).join('');
+  box.querySelectorAll('[data-lang]').forEach(function(b){
+    b.addEventListener('click', async function(){
+      try {
+        await AL.setLang(b.getAttribute('data-lang'));
+        // 화면 전체가 바뀌었으니 여기서 만든 것들도 다시 그립니다.
+        paintLang(); paintTheme(); paintPrefs(); paintList(); paintPromo();
+        showOk(AL.t('thSaved'));
+      } catch (e) {
+        console.error(e);
+        showErr(AL.t('errGeneric', { msg: e.message || String(e) }));
+      }
+    });
+  });
+}
+
+/* ── 🔴 2026-10-01 두 앱 잇기 — 에일리어스콜 안내 글을 언어에 맞춰 ── */
+function paintPromo(){
+  const en = AL.lang === 'en';
+  const s = el('acSect'), t = el('acPromoT'), d = el('acPromoD'), g = el('acPromoGo');
+  if (!s || !t || !d || !g) return;
+  s.textContent = en ? 'Apps that work well together' : '함께 쓰면 좋은 앱';
+  t.textContent = en ? '🚗 Need a QR tag for your car, belongings, child or pet?'
+                     : '🚗 차 · 물건 · 아이 · 반려동물에 QR이 필요하세요?';
+  d.textContent = en ? 'Let whoever finds them reach you instantly, without your number — Aliascall'
+                     : '발견한 분이 번호를 몰라도 바로 연락할 수 있게 — 에일리어스콜';
+  g.textContent = en ? 'Take a look ›' : '보러 가기 ›';
+}
+
+/* ── 모양 고르기 ───────────────────────────────────────────────
+   고르는 즉시 화면이 바뀝니다. 미리보기를 따로 안 봐도 됩니다. */
+const TH = {
+  mode:   [['dark','thDark'], ['light','thLight'], ['auto','thAuto']],
+  /* 🔴 2026-09-19 — 또렷하게 읽히는 셋을 맨 앞에 */
+  /* 🔴 2026-10-21 흰색 · 흰색 하늘 대화창을 맨 앞에 */
+  color:  [['sky','thSky'], ['white','thWhite'], ['crisp','thCrisp'], ['cream','thCream'], ['slate','thSlate'],
+           ['midnight','thMidnight'], ['paper','thPaper'], ['forest','thForest'],
+           ['dusk','thDusk'], ['ink','thInk'],
+           ['pitch','thPitch'], ['abyss','thAbyss'],
+           ['midnite','thMidnite'], ['charcoal','thCharcoal'],
+           ['bluegrey','thBluegrey'], ['sage','thSage'],
+           ['sand','thSand'], ['clay','thClay'],
+           ['bluegrey2','thBluegrey2'], ['sage2','thSage2']],
+  bubble: [['round','thRound'], ['square','thSquare'], ['tail','thTail'], ['outline','thOutline']],
+  scene:  [['none','thNone'], ['snow','thSnow'], ['rain','thRain'],
+           ['petals','thPetals'], ['stars','thStars']],
+  /* 🔴 2026-09-19 — 글씨 크기와 굵기 */
+  fs:     [['md','fsMd'], ['lg','fsLg'], ['xl','fsXl']],
+  fw:     [['normal','fwNormal'], ['bold','fwBold']],
+  ff:     [['system','ffSystem'], ['gothic','ffGothic'],
+           ['myeongjo','ffMyeongjo'], ['dotum','ffDotum'], ['hand','ffHand']],
+};
+let theme = AL.readThemeCache();
+
+function paintTheme(){
+  Object.keys(TH).forEach(function(kind){
+    const box = document.getElementById('sw' + kind.charAt(0).toUpperCase() + kind.slice(1));
+    /* ⚠ 자리가 없으면 넘어갑니다. 없는 것에 손대면 그 자리에서 멈추고
+       그 아래 전부가 안 돕니다(함정 111). */
+    if (!box) return;
+    box.innerHTML = TH[kind].map(function(o){
+      const on = theme[kind] === o[0];
+      const dot = kind === 'color' ? '<span class="dot"></span>' : '';
+      return '<button class="sw sw-' + AL.esc(o[0]) + (on ? ' on' : '') +
+             '" data-k="' + kind + '" data-v="' + AL.esc(o[0]) + '">' +
+             dot + AL.esc(AL.t(o[1])) + '</button>';
+    }).join('');
+    box.querySelectorAll('[data-k]').forEach(function(b){
+      b.addEventListener('click', async function(){
+        theme[b.getAttribute('data-k')] = b.getAttribute('data-v');
+        paintTheme();
+        try { await AL.saveTheme(theme); showOk(AL.t('thSaved')); }
+        catch (e) { console.error(e); showErr(AL.t('errGeneric', { msg: e.message || String(e) })); }
+      });
+    });
+  });
+}
+
+/* ── 알림 설정 ─────────────────────────────────────────────── */
+function paintPrefs(){
+  const p = AL.prefs();
+  const s1 = document.getElementById('pSound');
+  const s2 = document.getElementById('pVib');
+  s1.textContent = AL.t(p.sound ? 'prefOn' : 'prefOff');
+  s1.classList.toggle('on', p.sound);
+  s2.textContent = AL.t(p.vibrate ? 'prefOn' : 'prefOff');
+  s2.classList.toggle('on', p.vibrate);
+}
+document.getElementById('pSound').addEventListener('click', function(){
+  const p = AL.setPref('sound', !AL.prefs().sound);
+  paintPrefs();
+  if (p.sound) AL.ding();          // 켜면 바로 들려줍니다
+});
+document.getElementById('pVib').addEventListener('click', function(){
+  const p = AL.setPref('vibrate', !AL.prefs().vibrate);
+  paintPrefs();
+  if (p.vibrate) AL.buzz();
+});
+
+document.getElementById('out').addEventListener('click', function(){
+  // ⚠ 한 번 물어봅니다. 실수로 누르면 다시 로그인해야 합니다.
+  if (confirm(AL.t('outAsk'))) AL.signOut();
+});
+
+/* 🔴🔴 2026-09-17 — 연락처에 최근 대화 보이기
+
+   ⚠ 기본은 꺼져 있습니다. 이 앱은 번호를 감추려고 쓰는 앱이라,
+     목록에 대화가 드러나면 버스나 사무실에서 옆 사람이 읽습니다.
+     켜고 끄는 것을 손님이 정하게 합니다.
+
+   ⚠ 암호화를 켠 관계는 켜도 내용이 안 보입니다. 서버가 못 읽으니까요.
+     그런 줄에는 "🔒 잠긴 대화" 라고 나옵니다.
+
+   ⚠ 관계마다 따로 가릴 수도 있습니다. 연락처의 ⋯ 메뉴에 있습니다. */
+async function paintPrevBtn(){
+  const on = await AL.previewOn();
+  const b = document.getElementById('pPrev');
+  if (!b) return;
+  b.textContent = AL.t(on ? 'pvOn' : 'pvOff');
+  b.classList.toggle('on', on);
+}
+
+/* 🔴 2026-10-23 첫 화면 고르기 */
+(function(){
+  const KRm = AL.lang !== 'en';
+  const lbl = document.getElementById('fsLbl'), b = document.getElementById('pFirst');
+  if (!lbl || !b) return;
+  lbl.textContent = KRm ? '로그인하면 첫 화면' : 'First screen after login';
+  const nt = document.getElementById('fsNote');
+  if (nt) nt.textContent = KRm ? '이 휴대폰에 저장됩니다. 앱 업데이트 · 로그아웃 뒤에도 그대로이고, 앱을 다시 설치하거나 앱 데이터를 지우거나 휴대폰을 바꾸면 다시 정해 주세요.' : 'Saved on this phone. Kept after app updates and logouts; choose again after reinstalling, clearing app data or changing phones.';
+  const cur = function(){ try { return localStorage.getItem('burum_first_screen') === 'dial'; } catch (e) { return false; } };
+  const paintFs = function(){ const d = cur(); b.textContent = d ? (KRm ? '📞 부름 번호판' : '📞 Dial pad') : (KRm ? '📇 연락처' : '📇 Contacts'); b.classList.toggle('on', d); };
+  b.addEventListener('click', function(){ try { localStorage.setItem('burum_first_screen', cur() ? 'contacts' : 'dial'); } catch (e) {} paintFs(); showOk(AL.t('thSaved')); });
+  paintFs();
+})();
+
+document.getElementById('pPrev').addEventListener('click', async function(){
+  const now = await AL.previewOn();
+  const ok = await AL.setPreview(!now);
+  if (!ok) { showErr(AL.t('errGeneric', { msg: '설정을 저장하지 못했습니다' })); return; }
+  await paintPrevBtn();
+  showOk(AL.t('thSaved'));
+});
+
+/* ⚠ 2026-09-21 — 이 도우미가 이 화면에만 없었습니다.
+   다른 화면에는 다 있어서 있는 줄 알고 썼는데, 없으니 그 자리에서
+   멈췄습니다. try 로 감싸둔 탓에 오류도 안 보이고 **관리자 단추와
+   이용권 줄이 조용히 안 나왔습니다**(함정 121).
+   ⚠ 함수 안의 const el = ... 은 그 안에서만 쓰는 이름이라 부딪치지
+     않습니다. */
+function el(id){ return document.getElementById(id); }
+
+/* 🔴 2026-09-20 — 이용권 상태를 늘 보여줍니다.
+   ⚠ 띠는 화면마다 떴다 사라집니다. 여기는 언제 와도 있는 자리입니다. */
+async function paintPlanRow(){
+  try {
+    const p = await AL.myPlan(true);
+    const d = AL.planDaysLeft(p);
+    const now = el('planNow');
+    const go = el('planGo');
+    if (!now || !go) return;
+
+    if (p.state === 'paid') {
+      now.textContent = AL.t('plUntilLeft', { when: AL.fmtDate(p.until), n: d });
+      go.textContent = AL.t('plExtend');
+    } else if (p.state === 'trial') {
+      now.textContent = AL.t('plTrialLeft', { n: d }) +
+        (p.bonus_ready ? ' · ' + AL.t('plBonus') : '');
+      go.textContent = AL.t('plBuy');
+    } else {
+      now.textContent = AL.t('plOver');
+      go.textContent = AL.t('plBuy');
+    }
+  } catch (e) { console.warn('[plan] 이용권을 못 읽었습니다', e); }
+}
+
+/* 🔴 2026-09-28 — 저장 공간 한 줄. 넘쳤으면 빨간 글씨로 지워지는 날을 보여줍니다. */
+async function paintStorageRow(){
+  try {
+    const s = await AL.storageStatus();
+    const used = Number(s.used || 0), cap = Number(s.cap || 0);
+    const now = el('storNow');
+    if (now) now.textContent = AL.t('sgUsed', { used: AL.fmtBytes(used), cap: AL.fmtBytes(cap) });
+    const o = el('storOver');
+    if (o && used > cap && s.delete_after) {
+      o.style.display = '';
+      o.textContent = AL.t('sgOver', { over: AL.fmtBytes(used - cap), when: AL.fmtDate(s.delete_after) });
+    }
+  } catch (e) { console.warn('[storage] 저장 공간을 못 읽었습니다', e); }
+}
+
+(async function(){
+  AL.paintText();
+  paintPromo();       // 🔴 2026-10-01 — 에일리어스콜 안내 (로그인과 상관없이)
+  paintPrevBtn();
+  me = await AL.requireLogin();
+  if (!me) return;
+  document.getElementById('uid').textContent = me.id.slice(0, 8);
+  paintLang();
+  paintPrefs();
+  await AL.loadDataPrefs();
+  paintData();
+  paintUsage();
+  theme = await AL.loadTheme();
+  paintLang();          // 서버 값이 달랐으면 여기서 맞춰집니다
+  paintTheme();
+  await reload();
+  AL.showPlanBar();   // 🔴 2026-09-14
+  AL.showDeletionBar();   // 🔴 2026-09-22 — 삭제 예약이면 알림
+  paintPlanRow();     // 🔴 2026-09-20 — 이용권 자리
+  paintStorageRow();  // 🔴 2026-09-28 — 저장 공간 자리
+  AL.showPushBar();   // 🔴 2026-09-15 — 전화를 못 받는 상태면 알립니다
+
+  /* 🔴 2026-09-20 — 관리자에게만 "이용권 주기" 를 보여줍니다.
+     ⚠ 화면이 막는 게 아니라 서버가 막습니다. 여기서 숨기는 것은
+       보기 좋으라는 것뿐입니다. */
+  try {
+    var ad = await AL.sb.rpc('is_admin');
+    if (!ad.error && ad.data) el('adminBox').style.display = '';
+  } catch (e) {}
+  AL.showExpiringBar();   // 🔴 2026-09-19 — 곧 지워질 녹음
+  AL.startAlerts();      // 어느 화면에 있든 새 메시지를 알려줍니다
+})();
+</script>
+<script>
+/* =====================================================================
+   🔴🔴 2026-10-19 — "나" 화면 처음 길잡이 (손님: 처음 가입한 분들이 이 화면에서 헤맨다)
+   ① 내 기본 별칭 만들기  ② 나머지 설정은 지금 · 나중 아무 때나  ③ 사람과 잇기(연락처 환영 카드와 같은 세 가지)
+   보이는 때: 1:1 로 이어진 사람이 아직 없을 때만. 한 명이라도 이어지면 저절로 사라집니다.
+   ===================================================================== */
+(async function(){
+  const ko = AL.lang !== 'en';
+  const L = (k, e) => ko ? k : e;
+  const host = document.getElementById('firstGuide');
+  async function paint(){
+    try {
+      const s = (await AL.sb.auth.getSession()).data.session;
+      if (!s) return;
+      const c = await AL.sb.rpc('my_contacts');
+      const people = ((c && c.data) || []).filter(r => r.kind !== 'group');
+      if (people.length) { host.style.display = 'none'; return; }
+      let al = [];
+      try { al = await AL.loadAliases(); } catch (e) {}
+      const has = al.length > 0;
+      const nick = decodeURIComponent(String(s.user.email || '').split('@')[0]);
+      const step = (n, on, done) => '<div style="display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;opacity:' + (on || done ? 1 : .8) + '">' +
+        '<span style="flex:0 0 28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;' +
+        (done ? 'background:#3BB273;color:#fff' : 'background:#F2C94C;color:#1b1b1b') + '">' + (done ? '✓' : n) + '</span><div style="flex:1">';
+      const big = 'display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;margin:7px 0 0;text-decoration:none;color:inherit;background:rgba(255,255,255,.06);border:1px solid rgba(128,128,128,.35)';
+      host.innerHTML = '<div style="border-radius:16px;padding:15px 15px 6px;margin:0 0 18px;background:rgba(242,201,76,.10);border:2px solid rgba(242,201,76,.65);word-break:keep-all;line-height:1.6">' +
+        '<div style="font-size:18px;font-weight:900;margin:0 0 12px">🧭 ' + L('처음 오셨나요? 이 화면에서는 이것만 하시면 됩니다', 'New here? This is all you need to do') + '</div>' +
+
+        step(1, !has, has) + '<b style="font-size:16px">' + L('상대에게 보일 내 기본 별칭을 정하세요', 'Choose your main alias — the name people will see') + '</b><br>' +
+          (has ? '<span style="font-size:14px">' + L('✅ 별칭 <b>' + AL.esc(al[0].display_name || al[0].name || '') + '</b> 이(가) 준비되었습니다.', '✅ Your alias <b>' + AL.esc(al[0].display_name || al[0].name || '') + '</b> is ready.') + '</span>'
+               : '<span style="font-size:14px">' + L('아래 <b>별칭 만들기</b> 칸에 이름(예: 김사장 · 철수아빠)을 적고 <b>[별칭 만들기]</b> 단추를 누르세요.', 'Type a name under <b>Create alias</b> below and tap <b>[Create alias]</b>.') + '</span>' +
+                 '<br><button type="button" id="fgGo" style="margin:8px 0 0;padding:9px 14px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;border:none;background:#F2C94C;color:#1b1b1b">' + L('▼ 별칭 만들러 가기', '▼ Go to Create alias') + '</button>') +
+        '</div></div>' +
+
+        step(2, false, false) + '<b style="font-size:16px">' + L('나머지 설정은 지금 하셔도, 나중에 하셔도 됩니다', 'Other settings can wait') + '</b><br>' +
+          '<span style="font-size:14px;opacity:.85">' + L('언어 · 화면 모양 · 글씨 크기 · 이용권 등은 언제든 이 "나" 화면에서 바꿀 수 있어요.', 'Language, look, text size and plans can be changed here any time.') + '</span></div></div>' +
+
+        step(3, has, false) + '<b style="font-size:16px">' + L('이제 원하는 분과 이어지세요 — 아래 중 하나만', 'Now connect with someone — pick one') + '</b>' +
+          '<a href="alias_invite.html" style="' + big + '"><span style="font-size:22px">📤</span><span><b>' + L('내 초대 링크 보내기', 'Send my invite link') + '</b><br><small style="opacity:.75">' + L('카톡 · 문자로 보내면, 상대가 누르고 가입하는 순간 바로 이어집니다', 'They tap it, sign up, and you\'re connected') + '</small></span></a>' +
+          '<a href="alias_requests.html" style="' + big + '"><span style="font-size:22px">📨</span><span><b>' + L('닉네임으로 연결 요청', 'Request by nickname') + '</b><br><small style="opacity:.75">' + L('상대 닉네임을 알면 바로 요청 · 수락하면 이어집니다', 'Connected when they accept') + '</small></span></a>' +
+          '<a href="alias_join.html" style="' + big + '"><span style="font-size:22px">📥</span><span><b>' + L('받은 초대 코드 넣기 · QR', 'Enter an invite code · QR') + '</b><br><small style="opacity:.75">' + L('코드 · QR 찍기 · 사진으로 받은 QR 모두 여기서', 'Code, QR scan or a QR photo') + '</small></span></a>' +
+          (nick ? '<div style="font-size:13.5px;margin-top:9px">' + L('내 닉네임', 'My nickname') + ': <b>' + AL.esc(nick) + '</b> — ' + L('이걸 알려 주면 상대가 나에게 요청할 수 있어요. 요청은 연락처 맨 위에 뜹니다.', 'share it so people can request you; requests appear at the top of Contacts.') + '</div>' : '') +
+        '</div></div>' +
+      '</div>';
+      host.style.display = 'block';
+      const go = document.getElementById('fgGo');
+      if (go) go.onclick = () => { const n = document.getElementById('name'); if (n) { n.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => n.focus(), 350); } };
+    } catch (e) { console.warn('[firstGuide]', e); }
+  }
+  setTimeout(paint, 300);
+  /* 별칭을 만들면 1번을 ✓ 로 바꿉니다 */
+  const mk = document.getElementById('make');
+  if (mk) mk.addEventListener('click', () => setTimeout(paint, 1500));
+})();
+</script>
+<script>
+/* 🔴 2026-10-29 유치대리점 칸 · 앱 안에서는 "대리점 모집" 바닥글도 숨김(애플 승인 뒤 다시) */
+(function(){
+  function inApp(){ try { if (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) return true; } catch (e) {} return !!window.AliasNative; }
+  if (inApp()) document.querySelectorAll('.pr-promo').forEach(function(x){ x.style.display = 'none'; });
+  var box = document.getElementById('prBox');
+  if (!box || !window.PartnerRef) return;
+  setTimeout(function(){
+    PartnerRef.mount(box).then(function(){
+      var on = !!box.innerHTML.trim();
+      box.style.display = on ? '' : 'none';
+      document.getElementById('prSect').style.display = on ? '' : 'none';
+      try { var ko = !(localStorage.getItem('alias_lang_v1') || 'ko').startsWith('en'); document.getElementById('prSect').textContent = ko ? '추천 대리점' : 'Referral'; } catch (e) {}
+    });
+  }, 800);
+})();
+</script>
+</body>
+</html>
