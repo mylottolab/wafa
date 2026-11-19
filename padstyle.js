@@ -20,7 +20,8 @@
        center: function(){ return ['부름', '부름 전화', ''] },
        colors: { plate:'#1E7A4C', rim:'#145A37', base:'#F4F1E6', ink:'#1B2430', stop:'#B9BEC4', on:'#8FE3B0', onInk:'#0E1621' },
        defaults: { mode:'square', key:'dtmf', rot:true },
-       lang: function(){ return 'ko' | 'en' }
+       lang: function(){ return 'ko' | 'en' },
+       text: { ko:{ hold:' · 꾸욱 누르면 단축회선' }, en:{…} }   // (선택) 글씨 바꾸기
      })
    ⚠ 숫자를 넣는 것은 늘 원래 단추를 누르는 것(click)으로 합니다 — 앱의 규칙(0으로 시작 금지, 자리 수, 단축다이얼)이 그대로 지켜집니다.
    ===================================================================== */
@@ -191,7 +192,7 @@
     if (['dtmf','xylo','click','off'].indexOf(S.key) < 0) S.key = D.key || 'dtmf';
     if (typeof S.rot !== 'boolean') S.rot = D.rot !== false;
     var perm = shuffle(), sndOpen = false, applying = false;
-    function L(){ var l = C.lang ? C.lang() : 'ko'; return TX[l === 'en' ? 'en' : 'ko']; }
+    function L(){ var l = C.lang ? C.lang() : 'ko'; l = l === 'en' ? 'en' : 'ko'; var o = {}, k; for (k in TX[l]) o[k] = TX[l][k]; if (C.text && C.text[l]) for (k in C.text[l]) o[k] = C.text[l][k]; return o; }
     var col = C.colors || {};
     function vars(el){
       el.style.setProperty('--ps-plate', col.plate || '#0F6E68'); el.style.setProperty('--ps-rim', col.rim || '#0A4F4A');
