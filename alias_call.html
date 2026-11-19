@@ -1235,7 +1235,7 @@ function onRecSignal(kind, days, who, vid){
                         : (en ? 'Calling needs a WAFA plan. Texting and answering are free.' : '전화 걸기는 구독이 있어야 해요. 문자와 전화 받기는 무료예요.'));
         el('acts').innerHTML =
           '<a href="wafa_plan.html" style="display:inline-block;margin:8px;padding:14px 22px;border-radius:14px;background:#0F6E68;color:#fff;font-weight:800;text-decoration:none">' +
-            (addon ? (en ? 'Get a top-up' : '보충권 사기') : (en ? 'See plans' : '요금 보기')) + '</a>' +
+            (addon ? (en ? 'Get a top-up' : '보충권 구매') : (en ? 'See plans' : '요금 보기')) + '</a>' +
           '<a href="alias_chat.html?link=' + encodeURIComponent(linkId) + '" style="display:inline-block;margin:8px;padding:14px 22px;border-radius:14px;background:rgba(128,128,128,.25);color:inherit;font-weight:800;text-decoration:none">' +
             (en ? '💬 Text instead' : '💬 문자로 보내기') + '</a>';
         return;
