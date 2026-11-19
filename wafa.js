@@ -30,7 +30,7 @@
     contactsD: ['별칭 연락처 · 대화 · 통화', 'Alias contacts · chat · calls'],
     planN: ['💳 요금 · 보충', '💳 Plan · Top-up'], planD: ['구독 · 보충권 나눠 담기', 'Subscription · split top-up'],
     usageN: ['📊 내 사용량', '📊 My usage'], usageD: ['이번 달 남은 시간 · 지난 기록', 'This month · history'],
-    dialN: ['☎️ 번호판', '☎️ Keypad'], dialD: ['번호로 걸기 — 다음 업데이트', 'Call by number — next update'],
+    dialN: ['☎️ 번호판', '☎️ Keypad'], dialD: ['와파 번호로 걸기 · 연락처', 'Call a WAFA number · contacts'],
     switchMain: ['메인 바꾸기', 'Change main'],
     subActive: ['구독 중 · {d}까지', 'Subscribed · until {d}'], subCanceled: ['해지됨 · {d}까지 사용', 'Canceled · usable until {d}'],
     subGrace: ['결제 확인 중 · {d}까지', 'Payment issue · until {d}'], subNone: ['구독 전 — 문자와 전화 받기는 무료', 'No plan — texting and answering are free'],

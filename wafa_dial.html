@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>와파 전화</title>
+<meta name="theme-color" content="#0F6E68">
+<link rel="stylesheet" href="wafa.css?v=20261120">
+<script src="alias_config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="alias_common.js?v=20261119w"></script>
+<script src="wafa.js?v=20261120"></script>
+<script src="padstyle.js?v=20261119f"></script>
+<style>
+/* 와파 전화 — 앱을 열면 [번호판] [연락처] 두 화면이 바로 (2026-11-20)
+   번호판 판 안의 순서: 모양 · 소리 → 누른 번호(오른쪽 ⌫) → 번호판 → 음성 · 영상 · 문자. 112 · 119 안내는 판 밖 맨 아래 */
+:root{ --panel:#E4DED0; --panel-line:#D3CBB9; --call:#1E9E5A; --video:#2F6FB8; --text:#8FE3B0; --text-ink:#0E1621 }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --panel:#0A0E12; --panel-line:#26303A; --call:#2FBF73; --video:#3D7FD0 } }
+:root[data-theme="dark"]{ --panel:#0A0E12; --panel-line:#26303A; --call:#2FBF73; --video:#3D7FD0 }
+html,body{height:100%}
+.app{max-width:480px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column;
+  padding:calc(8px + env(safe-area-inset-top,0px)) 0 env(safe-area-inset-bottom,0px)}
+.px{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{display:flex;align-items:center;gap:10px;min-height:46px}
+.mine{flex:1;min-width:0;text-align:right;font-size:12px;color:var(--sub);line-height:1.3}
+.mine b{display:block;font:700 15px/1.3 "SF Mono","Roboto Mono",ui-monospace,monospace;color:var(--ink);letter-spacing:.03em}
+.strip{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub);padding:6px 12px;background:var(--soft);border-radius:12px;margin-top:4px}
+.strip .dot{width:8px;height:8px;border-radius:50%;background:var(--call);flex:0 0 auto}
+.strip.off .dot{background:var(--warn)}
+.ptabs{display:grid;grid-template-columns:1fr 1fr;background:var(--chip);border-radius:14px;padding:4px;margin-top:10px}
+.ptabs button{border:0;background:none;color:var(--sub);font:inherit;font-weight:800;padding:9px 0;border-radius:11px;cursor:pointer}
+.ptabs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.pages{flex:1;min-height:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-top:8px}
+.pages::-webkit-scrollbar{display:none}
+.page{flex:0 0 100%;scroll-snap-align:start;min-width:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:10px;padding-bottom:12px}
+.panel{background:var(--panel);border:1px solid var(--panel-line);border-radius:24px;padding:4px 12px 16px;display:flex;flex-direction:column;gap:10px}
+.disp{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 8px 8px 14px}
+.disp .no{flex:1;min-width:0;font:700 clamp(24px,7.6vw,32px)/1.2 "SF Mono","Roboto Mono",ui-monospace,monospace;letter-spacing:.03em;white-space:nowrap;overflow:hidden;min-height:40px}
+.disp .del{flex:0 0 auto;width:56px;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--ink);font-size:22px;cursor:pointer}
+.who{font-size:13.5px;color:var(--sub);text-align:center;min-height:20px;margin-top:-4px}
+.who b{color:var(--brand)} .who.emg{color:var(--warn);font-weight:700}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:330px;width:100%;margin:0 auto}
+.keys button{aspect-ratio:1.5;max-width:100%;border:0;border-radius:18px;background:var(--card);color:var(--ink);font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 0 var(--line);touch-action:manipulation}
+.keys button:active{background:var(--soft)}
+.keys b{font:600 27px/1 system-ui,sans-serif}
+.keys small{font-size:10px;letter-spacing:.14em;color:var(--sub);margin-top:3px;min-height:12px}
+.ps-round .keys{gap:12px 18px;max-width:300px}.ps-round .keys button{aspect-ratio:1;width:min(78px,100%);justify-self:center;border-radius:50%}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:330px;width:100%;margin:0 auto}
+.acts button{min-height:56px;border:0;border-radius:16px;font:inherit;font-weight:800;font-size:16px;cursor:pointer;color:#fff;white-space:nowrap}
+.acts .v{background:var(--call)} .acts .vv{background:var(--video)} .acts .m{background:var(--text);color:var(--text-ink)}
+.msg{font-size:14px;text-align:center;color:var(--sub);min-height:20px;margin:0}
+.msg.bad{color:var(--warn)} .msg a{color:var(--brand);font-weight:800}
+.emgbtn{display:block;text-align:center;background:var(--warn);color:#fff;border-radius:14px;padding:12px;font-weight:800;text-decoration:none}
+.sos{font-size:12.5px;color:var(--sub);text-align:center;margin:4px 0 0}
+.search{display:flex;gap:8px}
+.search input{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:11px 12px;font:inherit}
+.search a{border:0;background:var(--brand);color:var(--brand-ink);border-radius:12px;padding:0 14px;font-weight:800;display:grid;place-items:center;text-decoration:none;white-space:nowrap}
+.sec{font-size:12px;font-weight:800;color:var(--sub);letter-spacing:.06em;margin:4px 0 -2px}
+.list{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.ct{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.ct:last-child{border-bottom:0}
+.av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;font-size:16px;flex:0 0 auto;background:var(--brand);overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.ct .tx{flex:1;min-width:0;cursor:pointer}
+.ct .tx b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ct .tx span{font-size:13px;color:var(--sub)}
+.ct .tx .n{font-family:"SF Mono","Roboto Mono",ui-monospace,monospace}
+.tag{font-size:11px;font-weight:800;border-radius:6px;padding:1px 6px;margin-left:4px;background:var(--soft);color:var(--brand)}
+.tag.p{background:var(--chip);color:var(--sub)}
+.ct .act{display:flex;gap:6px}
+.ct .act button{width:40px;height:40px;border-radius:50%;border:0;background:var(--chip);font-size:17px;cursor:pointer}
+.ct .act button.c{background:var(--call);color:#fff}
+.empty{padding:22px 14px;text-align:center;color:var(--sub);font-size:14px}
+.bottom{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--card)}
+.bottom a,.bottom button{border:0;background:none;color:var(--sub);font:inherit;font-size:11px;font-weight:700;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;cursor:pointer}
+.bottom i{font-style:normal;font-size:20px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.sheet>div{background:var(--card);color:var(--ink);width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px max(18px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
+.sheet h3{margin:0;font-size:18px}
+.sheet ul{margin:0;padding-left:20px;font-size:14px;color:var(--sub);display:flex;flex-direction:column;gap:6px}
+.sheet textarea{border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:10px;font:inherit;min-height:90px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="px">
+    <div class="top">
+      <div class="wf-logo"><i>W</i>WAFA</div>
+      <div class="mine"><span data-d="myNo"></span><b id="myNo">—</b></div>
+      <div class="wf-lang"><button data-l="ko">한</button><button data-l="en">EN</button></div>
+    </div>
+    <div class="strip" id="strip"><span class="dot"></span><span id="stripTx"></span></div>
+    <div class="ptabs"><button data-p="0" data-d="tabPad"></button><button data-p="1" data-d="tabCt"></button></div>
+  </div>
+
+  <div class="pages" id="pages">
+    <!-- ① 번호판 (번호 전화 · Open Line) -->
+    <section class="page px">
+      <div class="panel" id="panel">
+        <div id="padBar"></div>
+        <div class="disp"><span class="no" id="no">&nbsp;</span><button type="button" class="del" id="del" aria-label="delete">⌫</button></div>
+        <div class="who" id="who"></div>
+        <div id="keys" class="keys"></div>
+        <a class="emgbtn" id="emg" href="tel:112" hidden></a>
+        <div class="acts" id="acts">
+          <button type="button" class="v" data-k="voice"></button>
+          <button type="button" class="vv" data-k="video"></button>
+          <button type="button" class="m" data-k="chat"></button>
+        </div>
+        <p class="msg" id="msg"></p>
+      </div>
+      <p class="sos" data-d="sos"></p>
+    </section>
+
+    <!-- ② 연락처 -->
+    <section class="page px">
+      <div class="search"><input id="q" type="search" autocomplete="off"><a href="alias_contacts.html" data-d="private"></a></div>
+      <div class="sec" data-d="recent"></div>
+      <div class="list" id="list"><div class="empty" data-d="loading"></div></div>
+    </section>
+  </div>
+
+  <nav class="bottom">
+    <button id="help"><i>❔</i><span data-d="navHelp"></span></button>
+    <a href="wafa_usage.html"><i>📊</i><span data-d="navUsage"></span></a>
+    <a href="wafa_plan.html"><i>💳</i><span data-d="navPlan"></span></a>
+    <a href="wafa_start.html?home=1"><i>⚙️</i><span data-d="navSet"></span></a>
+  </nav>
+</div>
+
+<div class="sheet" id="sheet" hidden><div>
+  <h3 data-d="helpT"></h3>
+  <ul id="helpList"></ul>
+  <button class="btn" id="helpOk" data-d="ok"></button>
+</div></div>
+
+<div class="sheet" id="noteSheet" hidden><div>
+  <h3 data-d="noteT"></h3>
+  <textarea id="noteTx" maxlength="300"></textarea>
+  <button class="btn" id="noteGo" data-d="noteGo"></button>
+  <button class="btn ghost" id="noteNo" data-d="cancel"></button>
+</div></div>
+
+<script>
+(async function(){
+  'use strict';
+  var EN = !!WF.en;
+  var D = {
+    myNo: ['내 와파 번호', 'My WAFA number'], tabPad: ['☎ 번호판', '☎ Keypad'], tabCt: ['👥 연락처', '👥 Contacts'],
+    wifiOn: ['인터넷 연결됨 · 전화를 걸고 받을 수 있어요', 'Online · you can call and answer'],
+    wifiOff: ['인터넷이 끊겼어요 · 와이파이나 핫스팟을 켜 주세요', 'No internet · turn on Wi-Fi or a hotspot'],
+    enter: ['와파 번호 10자리', '10-digit WAFA number'], unknown: ['연락처에 없는 번호', 'Not in your contacts'],
+    emg: ['와파로는 긴급전화가 안 됩니다', 'WAFA cannot place emergency calls'], emgBtn: ['휴대폰 전화로 {n} 걸기', 'Call {n} with your phone'],
+    voice: ['📞 음성', '📞 Voice'], video: ['🎥 영상', '🎥 Video'], chat: ['💬 문자', '💬 Text'],
+    sos: ['와파 번호로는 112 · 119 같은 긴급전화가 걸리지 않습니다. 휴대폰 기본 전화로 거세요.', 'WAFA numbers cannot reach 112 · 119. Use your phone’s own dialer.'],
+    need: ['번호 10자리를 눌러 주세요', 'Enter all 10 digits'], calling: ['연결하는 중…', 'Connecting…'],
+    e_none: ['없는 와파 번호예요', 'No such WAFA number'], e_self: ['내 번호예요', 'That is your own number'],
+    e_off: ['상대가 지금 전화를 받지 않게 해 두었어요', 'This number is not taking calls now'],
+    e_quota: ['이번 달 통화 시간을 다 썼어요. [요금]에서 보충권을 살 수 있어요.', 'This month’s minutes are used up. Get a top-up in Plans.'],
+    e_plan: ['전화 걸기는 구독이 있어야 해요. 문자는 무료예요.', 'Calling needs a plan. Texting is free.'],
+    e_login: ['다시 로그인해 주세요', 'Please log in again'], e_net: ['연결이 잠시 안 돼요. 다시 눌러 주세요.', 'Connection problem. Please try again.'],
+    e_blocked: ['연결할 수 없는 번호예요', 'This number cannot be reached'],
+    toPlan: ['요금 보기', 'See plans'],
+    private: ['💬 별칭 전화', '💬 Private'], recent: ['와파 번호로 이어진 사람', 'People on Open Line'],
+    loading: ['불러오는 중…', 'Loading…'], none: ['아직 없어요. 번호판에서 와파 번호로 걸면 여기에 생깁니다.', 'No one yet. Call a WAFA number from the keypad and they appear here.'],
+    search: ['이름이나 번호로 찾기', 'Search name or number'],
+    navHelp: ['사용법', 'Help'], navUsage: ['내 사용량', 'My usage'], navPlan: ['요금', 'Plans'], navSet: ['설정', 'Settings'],
+    ok: ['알겠어요', 'Got it'], cancel: ['취소', 'Cancel'],
+    noteT: ['문자 보내기', 'Send a text'], noteGo: ['보내고 대화 열기', 'Send and open chat'],
+    helpT: ['와파 사용법', 'How WAFA works'],
+    help: [['와이파이나 핫스팟만 있으면 와파 앱끼리 걸고 받습니다.', '번호판에서 와파 번호 10자리를 누르고 [음성] · [영상] · [문자]를 누르세요.', '번호판 위에서 모양(다이얼 · 네모 · 동그라미 · 섞기)과 소리를 고를 수 있어요.', '별칭 전화(Private Line)는 상대가 수락해야 연결됩니다 — [💬 별칭 전화]에서.', '112 · 119는 휴대폰 기본 전화로 걸어 주세요.'],
+           ['With Wi-Fi or a hotspot, WAFA apps call each other.', 'Dial a 10-digit WAFA number, then tap Voice, Video or Text.', 'Above the keypad you can pick a style (rotary, square, round, shuffle) and sounds.', 'Private Line connects after the other side accepts — open Private.', 'For 112 or 119, use your phone’s own dialer.']]
+  };
+  function d(k, v){ var s = D[k][EN ? 1 : 0]; if (v) for (var x in v) s = s.replace('{' + x + '}', v[x]); return s; }
+  function paintText(){
+    document.querySelectorAll('[data-d]').forEach(function(e){ e.textContent = d(e.dataset.d); });
+    document.querySelectorAll('#acts [data-k]').forEach(function(b){ b.textContent = d(b.dataset.k); });
+    document.getElementById('q').placeholder = d('search');
+    document.querySelectorAll('.wf-lang button').forEach(function(b){ b.classList.toggle('on', b.dataset.l === (EN ? 'en' : 'ko')); });
+    document.title = EN ? 'WAFA Phone' : '와파 전화';
+  }
+  var fmt = function(n){ return n.length <= 4 ? n : n.length <= 7 ? n.slice(0, 4) + '-' + n.slice(4) : n.slice(0, 4) + '-' + n.slice(4, 7) + '-' + n.slice(7); };
+  var LET = { 2:'ABC', 3:'DEF', 4:'GHI', 5:'JKL', 6:'MNO', 7:'PQRS', 8:'TUV', 9:'WXYZ' };
+  var digits = '', contacts = [];
+
+  /* 번호판 */
+  var K = document.getElementById('keys');
+  K.innerHTML = ['1','2','3','4','5','6','7','8','9','*','0','#'].map(function(k){
+    return '<button type="button" data-n="' + k + '"><b>' + k + '</b><small>' + (LET[k] || '') + '</small></button>'; }).join('');
+  K.onclick = function(e){ var b = e.target.closest('[data-n]'); if (b && /\d/.test(b.dataset.n) && digits.length < 10) { digits += b.dataset.n; draw(); } };
+  document.getElementById('del').onclick = function(){ digits = digits.slice(0, -1); draw(); };
+  var dt; document.getElementById('del').addEventListener('pointerdown', function(){ dt = setTimeout(function(){ digits = ''; draw(); }, 650); });
+  document.getElementById('del').addEventListener('pointerup', function(){ clearTimeout(dt); });
+
+  function draw(){
+    document.getElementById('no').textContent = fmt(digits) || ' ';
+    document.getElementById('del').style.visibility = digits ? 'visible' : 'hidden';
+    var who = document.getElementById('who'), emg = document.getElementById('emg');
+    var isEmg = /^(112|119|113|118|122|182|1366)$/.test(digits);
+    who.className = 'who' + (isEmg ? ' emg' : '');
+    if (isEmg) { who.textContent = d('emg'); emg.hidden = false; emg.href = 'tel:' + digits; emg.textContent = d('emgBtn', { n: digits }); return; }
+    emg.hidden = true;
+    var hit = digits.length === 10 && contacts.find(function(c){ return c.number === digits; });
+    who.innerHTML = !digits ? WF.esc(d('enter')) : hit ? '<b>' + WF.esc(hit.name) + '</b>' : digits.length === 10 ? WF.esc(d('unknown')) : digits.length + ' / 10';
+    msg('');
+  }
+  function msg(t, bad, html){ var m = document.getElementById('msg'); m.className = 'msg' + (bad ? ' bad' : ''); if (html) m.innerHTML = html; else m.textContent = t; }
+
+  /* 걸기 — 서버(wafa_dial)가 번호 주인을 찾아 바로 이어 주고(link), 통화 · 대화 화면은 부름 것을 그대로 씁니다 */
+  async function dial(kind, number, note){
+    number = number || digits;
+    if (number.length !== 10) { msg(d('need'), true); return; }
+    msg(d('calling'));
+    var r;
+    try { r = await AL.sb.rpc('wafa_dial', { p_number: number, p_kind: kind, p_note: note || null }); } catch (e) { r = { error: e }; }
+    var o = (r && r.data) || {};
+    if (r.error || !o.ok) {
+      var e = o.error || 'net';
+      if (e === 'need_plan' || e === 'quota') { msg('', true, WF.esc(d(e === 'quota' ? 'e_quota' : 'e_plan')) + ' <a href="wafa_plan.html">' + WF.esc(d('toPlan')) + '</a>'); return; }
+      msg(d('e_' + e) || d('e_net'), true); return;
+    }
+    if (kind === 'chat') { location.href = 'alias_chat.html?link=' + encodeURIComponent(o.link_id); return; }
+    location.href = 'alias_call.html?link=' + encodeURIComponent(o.link_id) + '&type=' + kind + '&once=' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+  D.e_need_plan = D.e_plan;
+  document.getElementById('acts').onclick = function(e){
+    var b = e.target.closest('[data-k]'); if (!b) return;
+    if (b.dataset.k === 'chat') { if (digits.length !== 10) { msg(d('need'), true); return; } document.getElementById('noteSheet').hidden = false; document.getElementById('noteTx').focus(); return; }
+    dial(b.dataset.k);
+  };
+  document.getElementById('noteGo').onclick = function(){ var t = document.getElementById('noteTx').value.trim(); document.getElementById('noteSheet').hidden = true; dial('chat', null, t); };
+  document.getElementById('noteNo').onclick = function(){ document.getElementById('noteSheet').hidden = true; };
+
+  /* 연락처 — 와파 번호로 이어진 사람 */
+  function drawContacts(){
+    var q = document.getElementById('q').value.trim().toLowerCase().replace(/-/g, '');
+    var L = contacts.filter(function(c){ return !q || (c.name || '').toLowerCase().indexOf(q) >= 0 || (c.number || '').indexOf(q) >= 0; });
+    document.getElementById('list').innerHTML = !L.length ? '<div class="empty">' + WF.esc(d('none')) + '</div>' : L.map(function(c, i){
+      var av = c.photo ? '<img src="' + WF.esc(c.photo) + '" alt="">' : WF.esc((c.name || '?').slice(0, 1));
+      return '<div class="ct"><span class="av">' + av + '</span><div class="tx" data-i="' + i + '"><b>' + WF.esc(c.name || fmt(c.number)) + '</b>' +
+        '<span class="n">' + WF.esc(fmt(c.number)) + '</span></div>' +
+        '<div class="act"><button data-v="' + i + '" aria-label="video">🎥</button><button class="c" data-c="' + i + '" aria-label="call">📞</button></div></div>'; }).join('');
+    document.getElementById('list')._L = L;
+  }
+  document.getElementById('q').oninput = drawContacts;
+  document.getElementById('list').onclick = function(e){
+    var L = this._L || [], c = e.target.closest('[data-c]'), v = e.target.closest('[data-v]'), x = e.target.closest('.tx');
+    if (c) dial('voice', L[+c.dataset.c].number);
+    else if (v) dial('video', L[+v.dataset.v].number);
+    else if (x) { digits = L[+x.dataset.i].number; draw(); go(0); }
+  };
+
+  /* 두 화면 */
+  var pages = document.getElementById('pages');
+  function mark(i){ document.querySelectorAll('.ptabs button').forEach(function(b){ b.classList.toggle('on', +b.dataset.p === i); }); }
+  function go(i){ pages.scrollTo({ left: i * pages.clientWidth, behavior: 'smooth' }); mark(i); }
+  document.querySelector('.ptabs').onclick = function(e){ var b = e.target.closest('[data-p]'); if (b) go(+b.dataset.p); };
+  pages.addEventListener('scroll', function(){ mark(Math.round(pages.scrollLeft / pages.clientWidth)); }, { passive: true });
+
+  /* 위 · 아래 */
+  function net(){ var on = navigator.onLine !== false; document.getElementById('strip').classList.toggle('off', !on); document.getElementById('stripTx').textContent = d(on ? 'wifiOn' : 'wifiOff'); }
+  window.addEventListener('online', net); window.addEventListener('offline', net);
+  document.getElementById('help').onclick = function(){ document.getElementById('helpList').innerHTML = D.help[EN ? 1 : 0].map(function(h){ return '<li>' + WF.esc(h) + '</li>'; }).join(''); document.getElementById('sheet').hidden = false; };
+  document.getElementById('helpOk').onclick = function(){ document.getElementById('sheet').hidden = true; };
+  document.querySelector('.wf-lang').onclick = function(e){ var b = e.target.closest('[data-l]'); if (!b) return; try { localStorage.setItem('alias_lang_v1', b.dataset.l === 'en' ? 'en' : 'kr'); } catch (er) {} location.reload(); };
+
+  paintText(); mark(0); net(); draw();
+
+  /* 번호판 모양 · 소리 (부름 · 가림콜과 같은 padstyle.js) */
+  var cs = getComputedStyle(document.documentElement);
+  var PS = PadStyle.attach({
+    key: 'wafa_padstyle', watch: document.getElementById('panel'),
+    digits: function(){ var o = {}; K.querySelectorAll('[data-n]').forEach(function(b){ if (/\d/.test(b.dataset.n)) o[b.dataset.n] = b; }); return o; },
+    extraKeys: function(el){ var b = el.closest('#keys [data-n]'); return b ? b.dataset.n : null; },
+    bar: function(){ return { parent: document.getElementById('padBar') }; },
+    rotaryAt: function(){ return { parent: document.getElementById('panel'), before: document.getElementById('emg') }; },
+    hide: function(){ return [K]; },
+    center: function(){ return ['WAFA', document.getElementById('myNo').textContent || '', 'Wi-Fi Phone']; },
+    colors: { plate:'#0F6E68', rim:'#0A4F4A', base:'#F6F1E4', ink:'#1B2430', stop:'#B9BEC4', on: cs.getPropertyValue('--brand').trim() || '#0F6E68', onInk: cs.getPropertyValue('--brand-ink').trim() || '#fff' },
+    defaults: { mode:'square', key:'dtmf', rot:true },
+    lang: function(){ return EN ? 'en' : 'ko'; }
+  });
+
+  /* 로그인 · 내 번호 · 연락처 */
+  var sess = await AL.requireLogin(); if (!sess) return;
+  try {
+    var me = await WF.me();
+    if (me && me.setup === false) { location.replace('wafa_start.html'); return; }
+    var n = me && me.numbers && me.numbers[0];
+    document.getElementById('myNo').textContent = n ? fmt(n.number) : '—';
+    PS.repaint();
+  } catch (e) {}
+  try { var r = await AL.sb.rpc('wafa_contacts'); contacts = (r && r.data) || []; } catch (e) { contacts = []; }
+  drawContacts(); draw();
+  var q0 = new URLSearchParams(location.search).get('n'); if (q0 && /^\d{10}$/.test(q0)) { digits = q0; draw(); }
+})();
+</script>
+</body>
+</html>

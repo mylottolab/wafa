@@ -9,7 +9,7 @@
 <script src="alias_config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="alias_common.js?v=20261119w"></script>
-<script src="wafa.js?v=20261119"></script>
+<script src="wafa.js?v=20261120"></script>
 </head>
 <body>
 <!-- 와파 홈 (앱을 열면 처음 보이는 화면)
@@ -48,6 +48,8 @@
     return;
   }
 
+  /* 🔴 2026-11-20 앱을 열면 바로 [번호판 · 연락처] 화면으로. 설정 · 타일 화면은 아래 메뉴 [설정](?home=1)에서 */
+  if (!/[?&]home=1/.test(location.search)) { location.replace('wafa_dial.html'); return; }
   var main = (me.prefs && me.prefs.main) || 'open';
   var num = (me.numbers || [])[0];
   var numCard = '<div class="card"><p class="muted">' + WF.t('myNumber') + '</p>' +
@@ -60,7 +62,7 @@
   var privTile = '<a class="tile' + (main === 'private' ? ' main' : '') + '" href="alias_contacts.html"><span class="ic">💬</span><b>' + WF.t('privN').replace('💬 ', '') +
                  (main === 'private' ? ' · ' + WF.t('mainTag') : '') + '</b><span>' + WF.t('contactsD') + '</span></a>';
   var tiles = (main === 'open' ? openTile + privTile : privTile + openTile) +
-    '<div class="tile off"><span class="ic">☎️</span><b>' + WF.t('dialN').replace('☎️ ', '') + '</b><span>' + WF.t('dialD') + '</span></div>' +
+    '<a class="tile" href="wafa_dial.html"><span class="ic">☎️</span><b>' + WF.t('dialN').replace('☎️ ', '') + '</b><span>' + WF.t('dialD') + '</span></a>' +
     '<a class="tile" href="wafa_plan.html"><span class="ic">💳</span><b>' + WF.t('planN').replace('💳 ', '') + '</b><span>' + WF.t('planD') + '</span></a>' +
     '<a class="tile" href="wafa_usage.html"><span class="ic">📊</span><b>' + WF.t('usageN').replace('📊 ', '') + '</b><span>' + WF.t('usageD') + '</span></a>' +
     '<button class="tile" id="sw"><span class="ic">🔁</span><b>' + WF.t('switchMain') + '</b><span>' + (main === 'open' ? WF.t('privN') : WF.t('openN')) + '</span></button>';
