@@ -913,7 +913,18 @@ function ongoingStart(){
     }
   } catch (e) { console.warn('[call] 통화 중 알림 켜기 실패', e); }
 }
+/* 🔴 2026-11-20 와파 — 내가 건 통화가 끝나면 걸린 시간을 이번 달 사용량에 더합니다(받은 통화는 무료). 한 번만 */
+let wafaUsedSent = false;
+function wafaReportUsage(){
+  if (wafaUsedSent || incoming || !t0) return;
+  wafaUsedSent = true;
+  const sec = Math.round((Date.now() - t0) / 1000);
+  if (sec < 1) return;
+  try { AL.sb.rpc('wafa_call_used', { p_video: callType === 'video', p_sec: sec }); } catch (e) {}
+}
+window.addEventListener('pagehide', wafaReportUsage);
 function ongoingStop(){
+  wafaReportUsage();
   ongoingOn = false;
   try {
     if (window.AliasNative && typeof AliasNative.callEnded === 'function') {

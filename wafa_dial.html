@@ -135,12 +135,6 @@ html,body{height:100%}
   <button class="btn" id="helpOk" data-d="ok"></button>
 </div></div>
 
-<div class="sheet" id="noteSheet" hidden><div>
-  <h3 data-d="noteT"></h3>
-  <textarea id="noteTx" maxlength="300"></textarea>
-  <button class="btn" id="noteGo" data-d="noteGo"></button>
-  <button class="btn ghost" id="noteNo" data-d="cancel"></button>
-</div></div>
 
 <script>
 (async function(){
@@ -161,6 +155,7 @@ html,body{height:100%}
     e_plan: ['전화 걸기는 구독이 있어야 해요. 문자는 무료예요.', 'Calling needs a plan. Texting is free.'],
     e_login: ['다시 로그인해 주세요', 'Please log in again'], e_net: ['연결이 잠시 안 돼요. 다시 눌러 주세요.', 'Connection problem. Please try again.'],
     e_blocked: ['연결할 수 없는 번호예요', 'This number cannot be reached'],
+    e_slow_down: ['없는 번호를 여러 번 눌렀어요. 잠시 뒤에 다시 걸어 주세요.', 'Too many wrong numbers. Please try again later.'],
     toPlan: ['요금 보기', 'See plans'],
     private: ['💬 별칭 전화', '💬 Private'], recent: ['와파 번호로 이어진 사람', 'People on Open Line'],
     loading: ['불러오는 중…', 'Loading…'], none: ['아직 없어요. 번호판에서 와파 번호로 걸면 여기에 생깁니다.', 'No one yet. Call a WAFA number from the keypad and they appear here.'],
@@ -217,8 +212,8 @@ html,body{height:100%}
     var o = (r && r.data) || {};
     if (r.error || !o.ok) {
       var e = o.error || 'net';
-      if (e === 'need_plan' || e === 'quota') { msg('', true, WF.esc(d(e === 'quota' ? 'e_quota' : 'e_plan')) + ' <a href="wafa_plan.html">' + WF.esc(d('toPlan')) + '</a>'); return; }
-      msg(d('e_' + e) || d('e_net'), true); return;
+      if (e === 'need_plan' || e === 'need_addon') { msg('', true, WF.esc(d(e === 'need_addon' ? 'e_quota' : 'e_plan')) + ' <a href="wafa_plan.html">' + WF.esc(d('toPlan')) + '</a>'); return; }
+      msg(D['e_' + e] ? d('e_' + e) : d('e_net'), true); return;
     }
     if (kind === 'chat') { location.href = 'alias_chat.html?link=' + encodeURIComponent(o.link_id); return; }
     location.href = 'alias_call.html?link=' + encodeURIComponent(o.link_id) + '&type=' + kind + '&once=' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -226,11 +221,8 @@ html,body{height:100%}
   D.e_need_plan = D.e_plan;
   document.getElementById('acts').onclick = function(e){
     var b = e.target.closest('[data-k]'); if (!b) return;
-    if (b.dataset.k === 'chat') { if (digits.length !== 10) { msg(d('need'), true); return; } document.getElementById('noteSheet').hidden = false; document.getElementById('noteTx').focus(); return; }
     dial(b.dataset.k);
   };
-  document.getElementById('noteGo').onclick = function(){ var t = document.getElementById('noteTx').value.trim(); document.getElementById('noteSheet').hidden = true; dial('chat', null, t); };
-  document.getElementById('noteNo').onclick = function(){ document.getElementById('noteSheet').hidden = true; };
 
   /* 연락처 — 와파 번호로 이어진 사람 */
   function drawContacts(){
