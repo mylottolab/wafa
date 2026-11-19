@@ -42,6 +42,7 @@
   var me = await WF.me();
   document.getElementById('now').textContent = WF.subLine(me);
   document.getElementById('manage').href = WF.manageUrl();
+  document.getElementById('manage').onclick = function(e){ if (WF.manage()) e.preventDefault(); };
   var cur = me.sub && ['active','grace','canceled'].indexOf(me.sub.status) >= 0 && new Date(me.sub.until) > new Date() ? me.sub.product : null;
 
   var P = document.getElementById('plans');

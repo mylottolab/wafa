@@ -159,6 +159,8 @@
     if (n && typeof n.storeBuy === 'function') { n.storeBuy(sku); return true; }
     WF.toast(WF.t('webOnly')); return false;
   };
+  /* 🔴 2026-11-19 아이폰 앱이면 앱 안에서 애플 구독 관리 창을 엽니다 */
+  WF.manage = function(){ var n = WF.native(); if (n && typeof n.storeManage === 'function') { n.storeManage(); return true; } return false; };
   WF.manageUrl = function(){
     if (AL.platform && AL.platform() === 'ios') return 'https://apps.apple.com/account/subscriptions';
     return 'https://play.google.com/store/account/subscriptions?sku=wafa_plan&package=com.weaveapp.wafa';
@@ -185,6 +187,8 @@
       if (out && out.consume && consumable && WF.native() && WF.native().storeConsume) WF.native().storeConsume(ev.a);
       if (!res.ok || !out.ok) return done({ ok:false, error: out && out.error });
       if (consumable && WF.native() && WF.native().storeConsume) WF.native().storeConsume(ev.a);   // 다시 살 수 있게 정리
+      /* 🔴 2026-11-19 아이폰 — 구독도 서버 확인이 끝나면 애플 거래를 정리(finish)해야 다음에 다시 오지 않습니다 */
+      else if (/^apple:/.test(ev.a || '') && WF.native() && WF.native().storeConsume) WF.native().storeConsume(ev.a);
       done(Object.assign({ ok:true, sku: ev.sku }, out));
     } catch (e) {
       console.error('[wafa] 결제 확인 실패', e);
