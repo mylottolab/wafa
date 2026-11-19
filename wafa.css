@@ -81,3 +81,4 @@ table.hist th{color:var(--sub);font-weight:600;font-size:12px}
 .code{font:800 18px ui-monospace,monospace;letter-spacing:.12em;background:var(--chip);border-radius:10px;padding:6px 10px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:99;max-width:90vw}
 @media (max-width:380px){ .num .no{font-size:16.5px;letter-spacing:.01em;white-space:nowrap} .num .no small{white-space:normal} }
+.wf-theme{border:0;background:var(--chip);color:var(--ink);border-radius:999px;width:40px;height:36px;font-size:17px;cursor:pointer;flex:0 0 auto}

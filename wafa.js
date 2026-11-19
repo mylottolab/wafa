@@ -12,6 +12,9 @@
   var pref = get(LK);
   var EN = pref === 'en' || (pref !== 'kr' && !/^ko/i.test(navigator.language || 'ko'));
   document.documentElement.lang = EN ? 'en' : 'ko';
+  /* 🔴 2026-11-20 주간 · 야간 — 고른 것을 이 폰에 기억(wafa_theme = 'light' | 'dark'). 고른 적 없으면 폰 설정을 따름 */
+  var TH = get('wafa_theme');
+  if (TH === 'light' || TH === 'dark') document.documentElement.setAttribute('data-theme', TH);
 
   var S = {
     appName: ['와파', 'WAFA'],
@@ -41,6 +44,9 @@
     freeReady: ['구독 중이라 일반 번호 하나를 무료로 받을 수 있어요. 아래에서 골라 [무료로 받기]를 누르세요.', 'With your plan, one standard number is free. Pick one below and tap [Get free].'],
     needPlanFree: ['일반 번호 무료 받기는 구독 뒤에 됩니다.', 'Subscribe first to get your free number.'],
     goSub: ['구독하러 가기 ›', 'Subscribe ›'],
+    toLight: ['주간으로 바꾸기', 'Switch to light'], toDark: ['야간으로 바꾸기', 'Switch to dark'],
+    getNumBtn: ['📞 내 와파 번호 받기 ›', '📞 Get my WAFA number ›'],
+    getNumSub: ['번호가 있어야 다른 분이 나에게 걸 수 있어요 · 구독하면 일반 번호 하나 무료', 'Others can call you once you have a number · one standard number is free with a plan'],
     credits: ['고르기권 {n}장이 있어요. 해당 등급 번호에서 [고르기권 쓰기]를 누르세요.', 'You have {n} pick pass(es). Tap [Use pass] on a number of that grade.'],
     tabN: ['일반', 'Standard'], tab3: ['★★★ 3 Stars', '★★★ 3 Stars'], tab4: ['★★★★ 4 Stars', '★★★★ 4 Stars'], tab5: ['★★★★★ 5 Stars', '★★★★★ 5 Stars'],
     rN: ['일반 번호: 구독하면 하나 무료 · 하나 더 3,300원', 'Standard: one free with a plan · extra ₩3,300'],
@@ -124,7 +130,16 @@
     else { var l = document.createElement('div'); l.className = 'wf-logo'; l.innerHTML = '<i>W</i>WAFA'; h.appendChild(l); }
     if (title) { var t = document.createElement('h1'); t.className = 'wf-title'; t.textContent = title; h.appendChild(t); }
     var sp = document.createElement('div'); sp.className = 'wf-sp'; h.appendChild(sp);
+    WF.themeBtn(h);
     WF.langSwitch(h);
+  };
+  /* 주간 · 야간 단추 — 지금 보이는 것과 반대로 바꿉니다 */
+  WF.isDark = function(){ var a = document.documentElement.getAttribute('data-theme'); return a ? a === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); };
+  WF.themeBtn = function(host){
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'wf-theme';
+    var paint = function(){ var d = WF.isDark(); b.textContent = d ? '☀️' : '🌙'; b.title = d ? WF.t('toLight') : WF.t('toDark'); b.setAttribute('aria-label', b.title); };
+    b.onclick = function(){ var to = WF.isDark() ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', to); set('wafa_theme', to); paint(); if (WF.onTheme) WF.onTheme(to); };
+    paint(); host.appendChild(b); return b;
   };
   WF.subLine = function(me){
     var s = me && me.sub;
