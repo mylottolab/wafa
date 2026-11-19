@@ -9,7 +9,7 @@
 <script src="alias_config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="alias_common.js?v=20261119w"></script>
-<script src="wafa.js?v=20261120"></script>
+<script src="wafa.js?v=20261120b"></script>
 </head>
 <body>
 <!-- 와파 번호 — 내 번호 · 무료 번호 받기 · 좋은 번호 사기 · 고르기권 · 생각해 둔 번호 · 가족 번호
@@ -55,10 +55,12 @@
     M.innerHTML = (me.numbers || []).map(function(n){
       return '<div class="num"><div class="no">' + WF.shown(n.number) + WF.badge(n.grade) + '<small>' + WF.t('kind_' + n.kind) +
         (n.main ? ' · ' + WF.t('mainTag') : '') + '</small></div></div>'; }).join('') || '<p class="muted">' + WF.t('noNumber') + '</p>';
-    var msg = [];
-    if (canFree) msg.push(WF.t('freeReady')); else if (!me.free_used) msg.push(WF.t('needPlanFree'));
+    var msg = [], goSub = false;
+    if (canFree) msg.push(WF.t('freeReady')); else if (!me.free_used) { msg.push(WF.t('needPlanFree')); goSub = true; }
     if ((me.credits || []).length) msg.push(WF.t('credits', { n: me.credits.length }));
-    document.getElementById('mineMsg').textContent = msg.join(' ');
+    /* 🔴 2026-11-20 구독 전이면 바로 옆에 [구독하러 가기] */
+    document.getElementById('mineMsg').innerHTML = WF.esc(msg.join(' ')) +
+      (goSub ? ' <a class="btn small" href="wafa_plan.html" style="display:inline-grid;place-items:center;text-decoration:none;margin-top:8px">' + WF.esc(WF.t('goSub')) + '</a>' : '');
     var H = me.holds || [];
     document.getElementById('holdCard').hidden = !H.length;
     document.getElementById('holds').innerHTML = H.map(function(h){
@@ -154,7 +156,9 @@
       WF.buy(r.sku); return;
     }
     if (r.ok) { location.reload(); return; }
-    M.className = 'msg bad'; M.textContent = r.error === 'need_plan' ? WF.t('needPlanFree') : WF.t('err');
+    M.className = 'msg bad';
+    if (r.error === 'need_plan') M.innerHTML = WF.esc(WF.t('needPlanFree')) + ' <a href="wafa_plan.html" style="font-weight:800;color:var(--brand)">' + WF.esc(WF.t('goSub')) + '</a>';
+    else M.textContent = WF.t('err');
   };
 
   drawMine();

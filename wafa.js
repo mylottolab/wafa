@@ -40,6 +40,7 @@
     kind_free: ['무료', 'Free'], kind_bought: ['구매', 'Purchased'], kind_extra: ['하나 더', 'Extra'], kind_given: ['선물', 'Gift'],
     freeReady: ['구독 중이라 일반 번호 하나를 무료로 받을 수 있어요. 아래에서 골라 [무료로 받기]를 누르세요.', 'With your plan, one standard number is free. Pick one below and tap [Get free].'],
     needPlanFree: ['일반 번호 무료 받기는 구독 뒤에 됩니다.', 'Subscribe first to get your free number.'],
+    goSub: ['구독하러 가기 ›', 'Subscribe ›'],
     credits: ['고르기권 {n}장이 있어요. 해당 등급 번호에서 [고르기권 쓰기]를 누르세요.', 'You have {n} pick pass(es). Tap [Use pass] on a number of that grade.'],
     tabN: ['일반', 'Standard'], tab3: ['★★★ 3 Stars', '★★★ 3 Stars'], tab4: ['★★★★ 4 Stars', '★★★★ 4 Stars'], tab5: ['★★★★★ 5 Stars', '★★★★★ 5 Stars'],
     rN: ['일반 번호: 구독하면 하나 무료 · 하나 더 3,300원', 'Standard: one free with a plan · extra ₩3,300'],
