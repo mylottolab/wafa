@@ -44,6 +44,7 @@
     freeReady: ['구독 중이라 일반 번호 하나를 무료로 받을 수 있어요. 아래에서 골라 [무료로 받기]를 누르세요.', 'With your plan, one standard number is free. Pick one below and tap [Get free].'],
     needPlanFree: ['일반 번호 무료 받기는 구독 뒤에 됩니다.', 'Subscribe first to get your free number.'],
     goSub: ['구독하러 가기 ›', 'Subscribe ›'],
+    terms: ['이용약관(EULA)', 'Terms of Use (EULA)'], privacy: ['개인정보처리방침', 'Privacy Policy'], refund: ['취소 · 환불', 'Cancellation · Refunds'],
     toLight: ['주간으로 바꾸기', 'Switch to light'], toDark: ['야간으로 바꾸기', 'Switch to dark'],
     getNumBtn: ['📞 내 와파 번호 받기 ›', '📞 Get my WAFA number ›'],
     getNumSub: ['번호가 있어야 다른 분이 나에게 걸 수 있어요 · 구독하면 일반 번호 하나 무료', 'Others can call you once you have a number · one standard number is free with a plan'],
@@ -140,6 +141,16 @@
     var paint = function(){ var d = WF.isDark(); b.textContent = d ? '☀️' : '🌙'; b.title = d ? WF.t('toLight') : WF.t('toDark'); b.setAttribute('aria-label', b.title); };
     b.onclick = function(){ var to = WF.isDark() ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', to); set('wafa_theme', to); paint(); if (WF.onTheme) WF.onTheme(to); };
     paint(); host.appendChild(b); return b;
+  };
+  /* 🔴 2026-11-20 약관 링크 — 자동 갱신 구독을 파는 화면에는 이용약관 · 개인정보처리방침이 꼭 보여야 합니다(애플 3.1.2) */
+  WF.legal = function(host){
+    if (!host) return;
+    var p = document.createElement('p'); p.className = 'muted wf-legal';
+    p.style.cssText = 'text-align:center;font-size:12.5px;margin:8px 0 0';
+    p.innerHTML = '<a href="wafa_terms.html" style="color:inherit">' + WF.t('terms') + '</a> · ' +
+      '<a href="wafa_privacy.html" style="color:inherit">' + WF.t('privacy') + '</a> · ' +
+      '<a href="wafa_refund.html" style="color:inherit">' + WF.t('refund') + '</a>';
+    host.appendChild(p);
   };
   WF.subLine = function(me){
     var s = me && me.sub;
