@@ -69,7 +69,7 @@
     planTitle: ['요금 · 보충', 'Plan · Top-up'], planNow: ['지금 요금제', 'Current plan'],
     p1: ['1개월', '1 month'], p3: ['3개월', '3 months'], p6: ['6개월', '6 months'], p12: ['12개월', '12 months'],
     perMonth: ['한 달 {p}', '{p} / month'], subscribe: ['구독하기', 'Subscribe'], change: ['이 요금제로 바꾸기', 'Switch to this plan'],
-    planInc: ['달마다 음성 300분 · 영상 100분 · 보관 1GB · 문자 무제한. 남은 음성 · 영상은 다음 달 한정 이월.', 'Each month: 300 voice min · 100 video min · 1 GB · unlimited texts. Unused minutes carry over one month.'],
+    planInc: ['달마다 음성 300분 · 영상 100분 · 보관 1GB · 문자 무제한. 남은 음성 · 영상은 다음 달 한정 이월. 번호가 여러 개여도 사용량은 한 계정에서 합쳐서 셉니다.', 'Each month: 300 voice min · 100 video min · 1 GB · unlimited texts. Unused minutes carry over one month. With several numbers, usage is counted together for your account.'],
     autoNote: ['자동으로 갱신됩니다. 해지는 [구독 관리]에서 언제든 할 수 있고, 낸 기간이 끝날 때까지 쓸 수 있어요.', 'Renews automatically. Cancel anytime in [Manage subscription]; you keep access until the period ends.'],
     manage: ['구독 관리', 'Manage subscription'],
     addonT: ['보충권 1,100원', 'Top-up ₩1,100'], addonD: ['1장 = 11칸. 1칸(100원)에 음성 30분 · 영상 10분 · 보관 100MB 중 원하는 대로 나눠 담아요.', '1 top-up = 11 units. Each unit (₩100): 30 voice min · 10 video min · or 100 MB.'],
