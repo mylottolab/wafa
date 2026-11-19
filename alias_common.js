@@ -15,6 +15,18 @@
 
 window.AL = window.AL || {};
 
+/* 🔴 2026-11-19 와파 아이폰 — 번호판 · 다이얼을 누를 때 화면이 위아래로 출렁이거나(고무줄 스크롤) 옆으로 밀리지 않게.
+   두 번 톡 눌러 확대되는 것도 막습니다(번호를 빨리 누를 때). */
+(function(){
+  try {
+    var st = document.createElement('style');
+    st.textContent = 'html,body{overscroll-behavior:none;overflow-x:clip;max-width:100vw}button,a,[data-k],.dl-k,.bn-pad button{touch-action:manipulation}';
+    (document.head || document.documentElement).appendChild(st);
+    var vp = document.querySelector('meta[name=viewport]');
+    if (vp && !/maximum-scale/.test(vp.content)) vp.content += ', maximum-scale=1';
+  } catch (e) {}
+})();
+
 /* ── 접속 ─────────────────────────────────────────────────────────
    🔴 열쇠는 alias_config.js 에 있습니다. 여기에는 없습니다.
       이 파일을 새로 받으셔도 alias_config.js 는 그대로 두시면 됩니다.
