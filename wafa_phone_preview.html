@@ -113,6 +113,7 @@ svg.dial text{font-family:system-ui,sans-serif;pointer-events:none}
 [hidden]{display:none!important}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:99;max-width:90vw;text-align:center}
 </style>
+<script src="padstyle.js?v=20261119"></script>
 </head>
 <body>
 <div class="app">
@@ -130,12 +131,8 @@ svg.dial text{font-family:system-ui,sans-serif;pointer-events:none}
     <!-- ① 번호판 -->
     <section class="page pad-x">
       <div class="disp"><div class="no" id="no"></div><div class="who" id="who"></div></div>
-      <div class="mode"><button data-m="keys" data-t="modeKeys"></button><button data-m="rotary" data-t="modeRotary"></button></div>
+      <div id="padBar"></div>
       <div id="padKeys" class="keys"></div>
-      <div id="padRotary" hidden>
-        <div class="dialwrap"><svg class="dial" id="dial" viewBox="0 0 300 300" aria-label="rotary dial"></svg></div>
-        <p class="hint" data-t="rotHint"></p>
-      </div>
       <a class="emgbtn" id="emg" href="tel:112" hidden></a>
       <div class="callrow">
         <button class="side" id="video" title="video">🎥</button>
@@ -193,8 +190,7 @@ var T = {
     helpT:'How WAFA works', help:['With Wi-Fi or a hotspot, WAFA apps call each other.','Open Line rings a WAFA number right away; Private Line connects after the other side accepts.','Pick the keypad you like: buttons or rotary.','For 112 or 119, use your phone’s own dialer.','During a call you can hold and switch to another incoming call.'] }
 };
 var L = (navigator.language||'ko').indexOf('ko')===0 ? 'ko' : 'en';
-var PAD = 'keys';
-try { var s1 = localStorage.getItem('wafa_lang'); if (s1==='ko'||s1==='en') L = s1; var s2 = localStorage.getItem('wafa_pad'); if (s2==='keys'||s2==='rotary') PAD = s2; } catch(e) {}
+try { var s1 = localStorage.getItem('wafa_lang'); if (s1==='ko'||s1==='en') L = s1; } catch(e) {}
 function t(k, v){ var s = T[L][k]; if (v) for (var x in v) s = s.replace('{'+x+'}', v[x]); return s; }
 
 /* 가상 연락처 */
@@ -221,7 +217,7 @@ function draw(){
   else {
     emg.hidden = true;
     var hit = digits.length===10 && C.find(function(c){ return c.no===digits; });
-    who.innerHTML = !digits ? t('enter') : hit ? '<b>' + esc(nm(hit)) + '</b>' : digits.length===10 ? t('unknown') : (10-digits.length) + ' / 10';
+    who.innerHTML = !digits ? t('enter') : hit ? '<b>' + esc(nm(hit)) + '</b>' : digits.length===10 ? t('unknown') : digits.length + ' / 10';
   }
   document.getElementById('del').style.visibility = digits ? 'visible' : 'hidden';
 }
@@ -235,73 +231,6 @@ function toast(m){ var e = document.querySelector('.toast'); if (!e) { e = docum
 document.getElementById('padKeys').innerHTML = ['1','2','3','4','5','6','7','8','9','*','0','#'].map(function(k){
   return '<button data-k="' + k + '"><b>' + k + '</b><small>' + (LET[k] || (k==='0' ? '+' : '')) + '</small></button>'; }).join('');
 document.getElementById('padKeys').onclick = function(e){ var b = e.target.closest('[data-k]'); if (b && /\d/.test(b.dataset.k)) press(b.dataset.k); };
-
-/* ── 다이얼식 ──
-   멈춤쇠(STOP)는 오른쪽 아래. 숫자 1 은 멈춤쇠에서 60°, 이후 30°씩 — 0 은 330° 를 돌려야 합니다 (옛날 전화와 같은 순서). */
-var CX = 150, RR = 104, HR = 21, STOP = 60, ORDER = ['1','2','3','4','5','6','7','8','9','0'];
-function need(i){ return 30 * (i + 2); }
-function ang(i){ return STOP - need(i); }
-function pt(a, r){ var q = a * Math.PI / 180; return [CX + r * Math.cos(q), CX + r * Math.sin(q)]; }
-(function buildDial(){
-  var s = '<defs><mask id="holes"><rect width="300" height="300" fill="#fff"/>';
-  ORDER.forEach(function(d, i){ var p = pt(ang(i), RR); s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + HR + '" fill="#000"/>'; });
-  s += '</mask></defs>';
-  s += '<circle cx="150" cy="150" r="147" fill="var(--dial-base)" stroke="var(--line)" stroke-width="2"/>';
-  ORDER.forEach(function(d, i){ var p = pt(ang(i), RR);
-    s += '<text x="' + p[0] + '" y="' + (p[1] + 1) + '" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="700" fill="var(--dial-ink)">' + d + '</text>';
-  });
-  s += '<g id="rot"><circle cx="150" cy="150" r="140" fill="var(--dial-plate)" mask="url(#holes)"/>';
-  ORDER.forEach(function(d, i){ var p = pt(ang(i), RR); s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + HR + '" fill="none" stroke="var(--dial-rim)" stroke-width="2.5"/>'; });
-  s += '<circle cx="150" cy="150" r="140" fill="none" stroke="var(--dial-rim)" stroke-width="3"/></g>';
-  s += '<circle cx="150" cy="150" r="54" fill="var(--dial-base)" stroke="var(--dial-rim)" stroke-width="3"/>';
-  s += '<text x="150" y="137" text-anchor="middle" font-size="15" font-weight="900" letter-spacing="2" fill="var(--dial-plate)">WAFA</text>';
-  s += '<text x="150" y="157" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--dial-ink)" font-family="ui-monospace,monospace">4829-051-318</text>';
-  s += '<text x="150" y="173" text-anchor="middle" font-size="8" fill="var(--dial-ink)" opacity=".6">Wi-Fi Phone</text>';
-  var a = pt(STOP + 13, 92), b = pt(STOP + 13, 148);
-  s += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="var(--dial-stop)" stroke-width="9" stroke-linecap="round"/>';
-  document.getElementById('dial').innerHTML = s;
-})();
-var rotEl = document.getElementById('rot'), dial = document.getElementById('dial');
-var rot = 0, busy = false, queue = [], drag = null;
-function setRot(r){ rot = r; rotEl.setAttribute('transform', 'rotate(' + r + ' 150 150)'); }
-function animate(from, to, speed, done){
-  var t0 = null, dur = Math.abs(to - from) / speed * 1000;
-  function step(ts){ if (t0 === null) t0 = ts; var k = Math.min(1, (ts - t0) / (dur || 1));
-    setRot(from + (to - from) * (to > from ? 1 - Math.pow(1 - k, 2) : k)); if (k < 1) requestAnimationFrame(step); else done && done(); }
-  requestAnimationFrame(step);
-}
-function back(){ busy = true; animate(rot, 0, 340, function(){ busy = false; next(); }); }   /* 되돌아올 때는 일정한 속도 — 옛 전화처럼 */
-function next(){ if (busy || !queue.length) return; var i = queue.shift(); busy = true;
-  animate(0, need(i), 700, function(){ press(ORDER[i]); back(); }); }
-function svgPt(e){ var r = dial.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 300, (e.clientY - r.top) / r.height * 300]; }
-function angOf(p){ return Math.atan2(p[1] - CX, p[0] - CX) * 180 / Math.PI; }
-dial.addEventListener('pointerdown', function(e){
-  var p = svgPt(e), hit = -1;
-  ORDER.forEach(function(d, i){ var h = pt(ang(i), RR); if (Math.hypot(p[0] - h[0], p[1] - h[1]) < HR + 8) hit = i; });
-  if (hit < 0) return;
-  if (busy) { queue.push(hit); return; }
-  drag = { i: hit, last: angOf(p), acc: 0, moved: false };
-  dial.setPointerCapture(e.pointerId); e.preventDefault();
-});
-dial.addEventListener('pointermove', function(e){
-  if (!drag) return;
-  var a = angOf(svgPt(e)), d = a - drag.last; if (d > 180) d -= 360; if (d < -180) d += 360;
-  drag.last = a; drag.acc = Math.max(0, Math.min(need(drag.i), drag.acc + d));
-  if (drag.acc > 6) drag.moved = true; setRot(drag.acc);
-});
-function up(){
-  if (!drag) return; var g = drag; drag = null;
-  if (!g.moved) { queue.push(g.i); setRot(0); next(); return; }
-  if (g.acc >= need(g.i) - 8) press(ORDER[g.i]);
-  back();
-}
-dial.addEventListener('pointerup', up); dial.addEventListener('pointercancel', up);
-
-/* ── 방식 고르기 ── */
-function setPad(m){ PAD = m; try { localStorage.setItem('wafa_pad', m); } catch(e) {}
-  document.getElementById('padKeys').hidden = m !== 'keys'; document.getElementById('padRotary').hidden = m !== 'rotary';
-  document.querySelectorAll('.mode button').forEach(function(b){ b.classList.toggle('on', b.dataset.m === m); }); }
-document.querySelector('.mode').onclick = function(e){ var b = e.target.closest('[data-m]'); if (b) setPad(b.dataset.m); };
 
 /* ── 통화 줄 ── */
 var delT;
@@ -355,8 +284,22 @@ function paint(){
   document.title = L === 'ko' ? '와파 전화 미리보기' : 'WAFA Phone Preview';
   net(); draw(); drawContacts();
 }
-document.querySelector('.lang').onclick = function(e){ var b = e.target.closest('[data-l]'); if (!b) return; L = b.dataset.l; try { localStorage.setItem('wafa_lang', L); } catch(err) {} paint(); };
-setPad(PAD); mark(0); paint();
+document.querySelector('.lang').onclick = function(e){ var b = e.target.closest('[data-l]'); if (!b) return; L = b.dataset.l; try { localStorage.setItem('wafa_lang', L); } catch(err) {} paint(); if (window.PS) PS.repaint(); };
+mark(0); paint();
+/* 번호판 모양 · 소리 — 부름 · 가림콜과 같은 padstyle.js */
+var PS = PadStyle.attach({
+  key: 'wafa_padstyle', watch: document.getElementById('padKeys').parentNode,
+  digits: function(){ var o = {}; document.querySelectorAll('#padKeys [data-k]').forEach(function(b){ if (/\d/.test(b.dataset.k)) o[b.dataset.k] = b; }); return o; },
+  extraKeys: function(el){ var b = el.closest('#padKeys [data-k]'); return b ? b.dataset.k : null; },
+  bar: function(){ return { parent: document.getElementById('padBar') }; },
+  rotaryAt: function(){ return { parent: document.getElementById('padKeys').parentNode, before: document.getElementById('emg') }; },
+  hide: function(){ return [document.getElementById('padKeys')]; },
+  center: function(){ return ['WAFA', '4829-051-318', 'Wi-Fi Phone']; },
+  colors: { plate:'#0F6E68', rim:'#0A4F4A', base:'#F6F1E4', ink:'#1B2430', stop:'#B9BEC4', on:getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#0F6E68', onInk:getComputedStyle(document.documentElement).getPropertyValue('--brand-ink').trim() || '#fff' },
+  css: '.ps-round .keys{gap:12px 18px;max-width:300px}.ps-round .keys button{aspect-ratio:1;width:min(78px,100%);justify-self:center;border-radius:50%}',
+  defaults: { mode:'square', key:'dtmf', rot:true },
+  lang: function(){ return L; }
+});
 </script>
 </body>
 </html>
