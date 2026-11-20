@@ -181,7 +181,7 @@
   WF.PLANS = [
     { id:'wafa_1m', base:'wafa-1m', k:'p1', price:1500, months:1 },
     { id:'wafa_3m', base:'wafa-3m', k:'p3', price:3300, months:3 },
-    { id:'wafa_6m', base:'wafa-6m', k:'p6', price:5500, months:6 },
+    { id:'wafa_6m', base:'wafa-6mo', k:'p6', price:5500, months:6 },
     { id:'wafa_12m', base:'wafa-12m', k:'p12', price:9900, months:12 },
   ];
   WF.native = function(){ return window.AliasNative || null; };

@@ -56,7 +56,7 @@ const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE
 ------------------------------------------------------------------------------------- */
 const GOOGLE_SUB_ID = 'wafa_plan';
 const PLAN_BY_BASEPLAN: Record<string, string> = {
-  'wafa-1m': 'wafa_1m', 'wafa-3m': 'wafa_3m', 'wafa-6m': 'wafa_6m', 'wafa-12m': 'wafa_12m',
+  'wafa-1m': 'wafa_1m', 'wafa-3m': 'wafa_3m', 'wafa-6m': 'wafa_1m', 'wafa-6mo': 'wafa_6m', 'wafa-12m': 'wafa_12m',   // 🔴 2026-11-21 6개월은 wafa-6mo (wafa-6m 은 1개월로 잘못 만들어 꺼 둠)
 };
 const PLAN_PRODUCTS = ['wafa_1m', 'wafa_3m', 'wafa_6m', 'wafa_12m'];
 const ADDON_SKU = 'wafa_addon';
