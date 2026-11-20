@@ -750,9 +750,27 @@ function vmBtn(txt, bg, fn){
   b.addEventListener('click', fn);
   return b;
 }
-function vmOffer(state){
+async function vmOffer(state){
   vmShown = true;
   bye(true);
+  /* 📲 2026-11-21 착신전환(안 받을 때) — 상대가 다른 와파 번호로 넘겨 두었으면 그 번호로 이어서 겁니다(한 번만: fw=1) */
+  if (P.get('fw') !== '1') {
+    try {
+      var fr = await AL.sb.rpc('wafa_forward_noanswer', { p_link: linkId, p_kind: callType });
+      var fo = (fr && !fr.error && fr.data) || {};
+      if (fo.ok && fo.link_id) {
+        var fn = String(fo.fwd_to || '');
+        setStatus(vmT('착신전환 중…', 'Forwarding…'));
+        el('bytes').textContent = fn.length === 10 ? fn.slice(0, 4) + '-' + fn.slice(4, 7) + '-' + fn.slice(7) : '';
+        el('acts').innerHTML = '';
+        setTimeout(function(){
+          leaveTo('alias_call.html?link=' + encodeURIComponent(fo.link_id) + '&type=' + encodeURIComponent(callType) +
+                  '&once=' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '&fw=1');
+        }, 1200);
+        return;
+      }
+    } catch (e) { console.warn('[fwd] 착신전환 확인 실패(음성사서함으로)', e); }
+  }
   el('bytes').textContent = vmT('음성 메시지를 남길 수 있어요 (최대 1분)', 'You can leave a voice message (up to 1 min)');
   var a = el('acts'); a.innerHTML = '';
   a.appendChild(vmBtn(vmT('🎙 음성 메시지 남기기', '🎙 Leave a message'), '#0F6E68', vmStart));

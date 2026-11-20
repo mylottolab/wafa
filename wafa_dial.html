@@ -193,6 +193,7 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
     loading: ['불러오는 중…', 'Loading…'], none: ['아직 없어요. 번호판에서 와파 번호로 걸면 여기에 생깁니다.', 'No one yet. Call a WAFA number from the keypad and they appear here.'],
     search: ['이름이나 번호로 찾기', 'Search name or number'],
     vmT: ['📮 음성사서함', '📮 Voicemail'], vmOpen: ['대화', 'Chat'],
+    fwdTo: ['📲 착신전환 — {n}로 연결합니다', '📲 Forwarded — connecting to {n}'],
     navHelp: ['사용법', 'Help'], navUsage: ['내 사용량', 'My usage'], navPlan: ['요금', 'Plans'], navSet: ['설정', 'Settings'],
     ok: ['알겠어요', 'Got it'], cancel: ['취소', 'Cancel'],
     noteT: ['문자 보내기', 'Send a text'], noteGo: ['보내고 대화 열기', 'Send and open chat'],
@@ -249,7 +250,10 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
       msg(D['e_' + e] ? d('e_' + e) : d('e_net'), true); return;
     }
     if (kind === 'chat') { location.href = 'alias_chat.html?link=' + encodeURIComponent(o.link_id); return; }
-    location.href = 'alias_call.html?link=' + encodeURIComponent(o.link_id) + '&type=' + kind + '&once=' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    var url = 'alias_call.html?link=' + encodeURIComponent(o.link_id) + '&type=' + kind + '&once=' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    /* 📲 상대가 「항상」 착신전환 — 넘긴 번호로 바로 연결(그 뒤로는 더 넘기지 않음) */
+    if (o.fwd_to) { msg(d('fwdTo', { n: fmt(o.fwd_to) })); setTimeout(function(){ location.href = url + '&fw=1'; }, 1200); return; }
+    location.href = url;
   }
   D.e_need_plan = D.e_plan;
   document.getElementById('acts').onclick = function(e){

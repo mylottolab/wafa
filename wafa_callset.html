@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>와파 통화 설정</title>
+<meta name="theme-color" content="#0F6E68">
+<link rel="stylesheet" href="wafa.css?v=20261120c">
+<script src="alias_config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="alias_common.js?v=20261121b"></script>
+<script src="wafa.js?v=20261120j"></script>
+<style>
+.opt{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1.5px solid var(--line);border-radius:14px;cursor:pointer}
+.opt input{margin-top:3px;width:18px;height:18px;accent-color:var(--brand);flex:0 0 auto}
+.opt b{display:block;font-size:15.5px}.opt span{font-size:13px;color:var(--sub)}
+.opt.on{border-color:var(--brand);background:var(--soft)}
+.now{font-weight:800;color:var(--brand)}
+</style>
+</head>
+<body>
+<!-- 📲 통화 설정 (2026-11-21) — 착신전환 · 음성사서함 안내.
+     착신전환: 내 와파 번호로 온 전화를 다른 와파 번호로 넘김. 서버 wafa_set_forward · wafa_get_forward (sql/06) -->
+<div class="wf">
+  <div class="wf-top"></div>
+  <div class="card">
+    <h2 id="fT"></h2>
+    <p class="muted" id="fD"></p>
+    <p class="msg now" id="now"></p>
+    <label class="opt" data-m="off"><input type="radio" name="m" value="off"><div><b id="mOff"></b><span id="mOffD"></span></div></label>
+    <label class="opt" data-m="noanswer"><input type="radio" name="m" value="noanswer"><div><b id="mNo"></b><span id="mNoD"></span></div></label>
+    <label class="opt" data-m="always"><input type="radio" name="m" value="always"><div><b id="mAl"></b><span id="mAlD"></span></div></label>
+    <div class="row" id="numRow"><input id="num" inputmode="numeric" maxlength="12" placeholder="4829-051-318"></div>
+    <button class="btn" id="save"></button>
+    <p class="msg" id="msg"></p>
+  </div>
+  <div class="card">
+    <h2 id="vT"></h2>
+    <p class="muted" id="vD"></p>
+  </div>
+</div>
+<script>
+(async function(){
+  var EN = !!WF.en;
+  var T = {
+    title: ['통화 설정', 'Call settings'],
+    fT: ['📲 착신전환', '📲 Call forwarding'],
+    fD: ['내 와파 번호로 온 전화를 다른 와파 번호로 넘깁니다. 문자는 넘기지 않고 나에게 그대로 옵니다.', 'Send calls to your WAFA number on to another WAFA number. Texts still come to you.'],
+    mOff: ['끄기', 'Off'], mOffD: ['전화는 나에게만 옵니다', 'Calls ring only you'],
+    mNo: ['안 받을 때', 'When I don’t answer'], mNoD: ['40초 안 받거나 거절하면 넘긴 번호로 이어서 걸립니다', 'After 40 seconds or if you decline, the call goes on to the number below'],
+    mAl: ['항상', 'Always'], mAlD: ['나에게 울리지 않고 바로 넘긴 번호로 연결됩니다', 'Calls go straight to the number below without ringing you'],
+    ph: ['넘길 와파 번호 10자리', '10-digit WAFA number'],
+    save: ['저장', 'Save'], saved: ['저장했어요', 'Saved'],
+    nowOff: ['지금: 착신전환 꺼짐', 'Now: forwarding off'], nowOn: ['지금: {m} → {n}', 'Now: {m} → {n}'],
+    e_none: ['없는 와파 번호예요', 'No such WAFA number'], e_self: ['내 번호로는 넘길 수 없어요', 'You can’t forward to your own number'],
+    e_no_number: ['내 와파 번호가 있어야 착신전환을 쓸 수 있어요', 'You need a WAFA number to use forwarding'],
+    e_need: ['번호 10자리를 넣어 주세요', 'Enter all 10 digits'], e_net: ['저장하지 못했어요. 다시 눌러 주세요.', 'Could not save. Please try again.'],
+    vT: ['📮 음성사서함', '📮 Voicemail'],
+    vD: ['내가 건 전화를 상대가 안 받으면 음성 메시지(최대 1분)를 남길 수 있고, 나에게 남긴 메시지는 [번호판 → 연락처] 맨 위 📮에서 바로 들을 수 있어요. 따로 켤 필요 없이 늘 켜져 있습니다.',
+         'If someone doesn’t answer your call you can leave a voice message (up to 1 min). Messages left for you are at the top of Keypad → Contacts (📮). Always on.']
+  };
+  function t(k, v){ var s = T[k][EN ? 1 : 0]; if (v) for (var x in v) s = s.replace('{' + x + '}', v[x]); return s; }
+  ['fT','fD','mOff','mOffD','mNo','mNoD','mAl','mAlD','save','vT','vD'].forEach(function(k){ document.getElementById(k).textContent = t(k); });
+  document.getElementById('num').placeholder = t('ph');
+  document.title = t('title');
+  WF.header(t('title'), 'wafa_start.html');
+  WF.paint();
+  var sess = await AL.requireLogin(); if (!sess) return;
+
+  var fmt = function(n){ n = String(n || ''); return n.length === 10 ? n.slice(0, 4) + '-' + n.slice(4, 7) + '-' + n.slice(7) : n; };
+  var cur = { mode: 'off', number: null };
+  function pick(m){
+    document.querySelectorAll('.opt').forEach(function(o){ var on = o.dataset.m === m; o.classList.toggle('on', on); o.querySelector('input').checked = on; });
+    document.getElementById('numRow').hidden = m === 'off';
+  }
+  function showNow(){
+    document.getElementById('now').textContent = cur.mode === 'off' ? t('nowOff') :
+      t('nowOn', { m: t(cur.mode === 'always' ? 'mAl' : 'mNo'), n: fmt(cur.number) });
+  }
+  document.querySelectorAll('.opt input').forEach(function(i){ i.onchange = function(){ pick(i.value); }; });
+  document.getElementById('num').oninput = function(){ var v = this.value.replace(/\D/g, '').slice(0, 10); this.value = fmt(v); };
+
+  try { cur = await WF.rpc('wafa_get_forward') || cur; } catch (e) {}
+  pick(cur.mode || 'off'); if (cur.number) document.getElementById('num').value = fmt(cur.number); showNow();
+
+  document.getElementById('save').onclick = async function(){
+    var m = (document.querySelector('.opt input:checked') || {}).value || 'off', n = document.getElementById('num').value.replace(/\D/g, '');
+    var M = document.getElementById('msg'); M.className = 'msg';
+    if (m !== 'off' && n.length !== 10) { M.className = 'msg bad'; M.textContent = t('e_need'); return; }
+    this.disabled = true;
+    var r = null; try { r = await WF.rpc('wafa_set_forward', { p_mode: m, p_number: m === 'off' ? null : n }); } catch (e) { r = null; }
+    this.disabled = false;
+    if (!r || !r.ok) { M.className = 'msg bad'; M.textContent = T['e_' + (r && r.error)] ? t('e_' + r.error) : t('e_net'); return; }
+    cur = { mode: r.mode, number: r.number || cur.number }; showNow();
+    M.className = 'msg ok'; M.textContent = t('saved');
+  };
+})();
+</script>
+</body>
+</html>
