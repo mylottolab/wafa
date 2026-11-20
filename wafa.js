@@ -40,7 +40,7 @@
     usageN: ['📊 내 사용량', '📊 My usage'], usageD: ['이번 달 남은 시간 · 지난 기록', 'This month · history'],
     dialN: ['☎️ 번호판', '☎️ Keypad'], dialD: ['와파 번호로 걸기 · 연락처', 'Call a WAFA number · contacts'],
     switchMain: ['메인 바꾸기', 'Change main'],
-    subActive: ['구독 중 · {d}까지', 'Subscribed · until {d}'], subCanceled: ['해지됨 · {d}까지 사용', 'Canceled · usable until {d}'],
+    subActive: ['구독 중 · {d}까지', 'Subscribed · until {d}'], subRenew: ['구독 중 · 다음 자동 결제 {d}', 'Subscribed · renews {d}'], subCanceled: ['해지됨 · {d}까지 사용', 'Canceled · usable until {d}'],
     subGrace: ['결제 확인 중 · {d}까지', 'Payment issue · until {d}'], subNone: ['구독 전 — 문자와 전화 받기는 무료', 'No plan — texting and answering are free'],
     textFree: ['문자 · 전화 받기는 언제나 무료', 'Texting and answering are always free'],
     /* 번호 */
@@ -176,7 +176,12 @@
     var s = me && me.sub;
     if (!s || s.status === 'expired' || s.status === 'refunded' || new Date(s.until) < new Date()) return WF.t('subNone');
     var d = WF.date(s.until);
-    return s.status === 'canceled' ? WF.t('subCanceled', { d:d }) : s.status === 'grace' ? WF.t('subGrace', { d:d }) : WF.t('subActive', { d:d });
+    /* 🔴 2026-11-21 이틀 안이면 시각까지(시험 결제는 몇 분마다 갱신되어 "오늘까지" 로 보여 오해가 생김) */
+    try { var u = new Date(s.until); if (u - new Date() < 48 * 3600 * 1000)
+      d += ' ' + u.toLocaleTimeString(EN ? 'en-US' : 'ko-KR', { hour: 'numeric', minute: '2-digit' }); } catch (e) {}
+    if (s.status === 'canceled') return WF.t('subCanceled', { d:d });
+    if (s.status === 'grace') return WF.t('subGrace', { d:d });
+    return s.auto === false ? WF.t('subActive', { d:d }) : WF.t('subRenew', { d:d });
   };
 
   /* ── 결제 ─────────────────────────────────────────────────────
