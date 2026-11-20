@@ -13,6 +13,11 @@
   var EN = pref === 'en' || (pref !== 'kr' && !/^ko/i.test(navigator.language || 'ko'));
   document.documentElement.lang = EN ? 'en' : 'ko';
   /* 🔴 2026-11-20 주간 · 야간 — 고른 것을 이 폰에 기억(wafa_theme = 'light' | 'dark'). 고른 적 없으면 폰 설정을 따름 */
+  /* 🔴 2026-11-21 와파 화면에서 [별칭 전화](alias_contacts)를 직접 눌렀다는 표시 — 연락처 화면이 번호판으로 되돌려 보내지 않게 */
+  document.addEventListener('click', function(e){
+    var a = e.target && e.target.closest && e.target.closest('a[href^="alias_contacts.html"]');
+    if (a) { try { sessionStorage.setItem('wafa_pl', String(Date.now())); } catch (er) {} }
+  }, true);
   var TH = get('wafa_theme');
   if (TH === 'light' || TH === 'dark') document.documentElement.setAttribute('data-theme', TH);
 

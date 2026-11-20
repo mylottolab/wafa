@@ -702,8 +702,8 @@ AL.STR = {
                  en:'Their screen updates immediately.\nWhich alias should they see?' },
 
   /* 로그인 (alias_auth.html) */
-  tagline:   { kr:'번호가 없는 전화입니다.\n초대를 받은 사람만 연결됩니다.',
-               en:'A phone without numbers.\nOnly people you invite can reach you.' },
+  tagline:   { kr:'와이파이만 있으면 걸고 받는 비상폰입니다.\n와파 번호로 문자 · 음성 · 영상 통화를 하세요.',
+               en:'The backup phone that works on Wi-Fi.\nText, voice and video calls with your WAFA number.' },
   nickLabel: { kr:'닉네임', en:'Nickname' },
   nickHint:  { kr:'2~20자. 영문 소문자, 숫자, 한글, - _ 만 씁니다.\n상대에게는 보이지 않습니다.',
                en:'2-20 characters. Lowercase letters, numbers, Korean, - and _ only.\nNobody else sees this.' },
@@ -5227,6 +5227,8 @@ AL.EN_PATCH = {
   '이용약관': 'Terms of Service', '개인정보처리방침': 'Privacy Policy', '취소·환불 규정': 'Cancellation & Refund Policy',
   '사용설명서': 'User guide',
   '⚠ 부름은 보이스피싱을 배척합니다.': '⚠ Burum rejects voice phishing.',
+  '⚠ 와파는 보이스피싱을 배척합니다.': '⚠ WAFA rejects voice phishing.',
+  '⚠ 와파는 상대방 동의 없는 일방적인 녹음 · 녹화가 불가능합니다.': '⚠ WAFA cannot record audio or video without the other person\'s consent.',
   '부름을 이용하는 국가기관 · 금융기관은 없습니다.': 'No government agency or financial institution uses Burum.',
   '⚠ 부름은 상대방 동의 없는 일방적인 녹음 · 녹화가 불가능합니다.': '⚠ Burum cannot record audio or video without the other person\'s consent.',
   '‹ 연락처': '‹ Contacts', '닫기': 'Close', '뒤로': 'Back', '보내기': 'Send', '메시지': 'Message', '상대': 'Other person',

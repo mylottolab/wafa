@@ -35,9 +35,21 @@
 <title>부름</title>
 <link rel="stylesheet" href="alias_common.css?v=20260927a">
 <link rel="stylesheet" href="alias_theme.css?v=20261021d">
+<script>
+/* 🔴 2026-11-21 와파 — 앱 아이콘을 누르면 안드로이드 앱(버전 1)이 이 연락처(별칭 전화) 화면을 엽니다.
+   와파의 첫 화면은 번호판(wafa_dial)이라, 와파 화면에서 [별칭 전화]를 눌러 온 게 아니면 번호판으로 보냅니다.
+   ⚠ 대화 · 통화 · 별칭 화면(alias_ · burum_ · nureum_ · sos)에서 돌아온 것은 그대로 둡니다. */
+(function(){
+  try {
+    var ref = document.referrer || '', t = +(sessionStorage.getItem('wafa_pl') || 0);
+    var inside = /\/(alias_[a-z_]+|burum_[a-z_]+|nureum[a-z_]*|sos|support[a-z_]*)\.html/.test(ref);
+    if (!inside && !(t && Date.now() - t < 15000)) location.replace('wafa_dial.html');
+  } catch (e) {}
+})();
+</script>
 <script src="alias_config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="alias_common.js?v=20261121b"></script>
+<script src="alias_common.js?v=20261121c"></script>
 <script src="alias_call.js?v=20261020g"></script>
 <script>
 /* ⚠ alias_common.js 를 못 읽으면 화면이 텅 빕니다. 글씨를 채우는 것이
