@@ -44,7 +44,7 @@
     freeReady: ['구독 중이라 일반 번호 하나를 무료로 받을 수 있어요. 아래에서 골라 [무료로 받기]를 누르세요.', 'With your plan, one standard number is free. Pick one below and tap [Get free].'],
     needPlanFree: ['일반 번호 무료 받기는 구독 뒤에 됩니다.', 'Subscribe first to get your free number.'],
     goSub: ['구독하러 가기 ›', 'Subscribe ›'],
-    logout: ['로그아웃', 'Log out'], logoutAgain: ['한 번 더 누르면 로그아웃', 'Tap again to log out'],
+    logout: ['로그아웃', 'Log out'], delAcct: ['계정 삭제', 'Delete account'], logoutAgain: ['한 번 더 누르면 로그아웃', 'Tap again to log out'],
     terms: ['이용약관(EULA)', 'Terms of Use (EULA)'], privacy: ['개인정보처리방침', 'Privacy Policy'], refund: ['취소 · 환불', 'Cancellation · Refunds'],
     toLight: ['주간으로 바꾸기', 'Switch to light'], toDark: ['야간으로 바꾸기', 'Switch to dark'],
     getNumBtn: ['📞 내 와파 번호 받기 ›', '📞 Get my WAFA number ›'],
@@ -150,7 +150,8 @@
     p.style.cssText = 'text-align:center;font-size:12.5px;margin:8px 0 0';
     p.innerHTML = '<a href="wafa_terms.html" style="color:inherit">' + WF.t('terms') + '</a> · ' +
       '<a href="wafa_privacy.html" style="color:inherit">' + WF.t('privacy') + '</a> · ' +
-      '<a href="wafa_refund.html" style="color:inherit">' + WF.t('refund') + '</a>';
+      '<a href="wafa_refund.html" style="color:inherit">' + WF.t('refund') + '</a> · ' +
+      '<a href="wafa_delete.html" style="color:inherit">' + WF.t('delAcct') + '</a>';
     host.appendChild(p);
   };
   /* 🔴 2026-11-20 로그아웃 — 한 번 누르면 「한 번 더 누르면 로그아웃」, 3초 안에 다시 누르면 로그아웃(실수 막기) */
