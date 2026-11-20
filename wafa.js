@@ -103,7 +103,7 @@
   WF.setLang = function(en){ set(LK, en ? 'en' : 'kr'); location.reload(); };
   WF.langSwitch = function(host){
     var d = document.createElement('div'); d.className = 'wf-lang';
-    d.innerHTML = '<button data-l="kr">한국어</button><button data-l="en">English</button>';
+    d.innerHTML = '<button data-l="kr" aria-label="한국어">한</button><button data-l="en" aria-label="English">EN</button>';   // 🔴 2026-11-20 좁게 — 제목이 잘리지 않게
     d.querySelector('[data-l="' + (EN ? 'en' : 'kr') + '"]').classList.add('on');
     d.onclick = function(e){ var b = e.target.closest('button'); if (b) WF.setLang(b.dataset.l === 'en'); };
     host.appendChild(d);
