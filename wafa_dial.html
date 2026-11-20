@@ -9,7 +9,7 @@
 <script src="alias_config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="alias_common.js?v=20261119w"></script>
-<script src="wafa.js?v=20261120h"></script>
+<script src="wafa.js?v=20261120i"></script>
 <script src="padstyle.js?v=20261119f"></script>
 <style>
 /* 와파 전화 — 앱을 열면 [번호판] [연락처] 두 화면이 바로 (2026-11-20)
@@ -140,6 +140,7 @@ html,body{height:100%}
   <h3 data-d="helpT"></h3>
   <ul id="helpList"></ul>
   <button class="btn" id="helpOk" data-d="ok"></button>
+  <div id="logoutHost"></div>
 </div></div>
 
 
@@ -266,6 +267,7 @@ html,body{height:100%}
 
   paintText(); mark(0); net(); draw();
   WF.themeBtn(document.getElementById('themeHost'));
+  WF.logoutBtn(document.getElementById('logoutHost'));
   document.querySelector('#getNum b').textContent = WF.t('getNumBtn');
   document.querySelector('#getNum span').textContent = WF.t('getNumSub');
 
