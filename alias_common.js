@@ -24,6 +24,19 @@ window.AL = window.AL || {};
     (document.head || document.documentElement).appendChild(st);
     var vp = document.querySelector('meta[name=viewport]');
     if (vp && !/maximum-scale/.test(vp.content)) vp.content += ', maximum-scale=1';
+    /* 🔴 2026-11-21 와파 아이폰 앱 — 앱이 이미 화면 위(시계 줄) · 아래(홈 막대) 자리를 비워 두고 화면을 그립니다.
+       그런데 화면 쪽에서 그 자리를 한 번 더 비워 위아래가 두 번 비고 다이얼 아래가 잘렸습니다.
+       아이폰 앱이고, 화면 높이가 폰보다 이미 줄어 있으면(앱이 비워 둔 것) 화면 쪽 여백은 빼기 */
+    var ua = navigator.userAgent || '';
+    var iosApp = /iPhone|iPad|iPod/.test(ua) && !/Safari\//.test(ua) &&
+                 ((window.webkit && window.webkit.messageHandlers) || window.Capacitor);
+    if (iosApp && Math.max(screen.height, screen.width) - window.innerHeight > 40 && window.innerHeight > window.innerWidth) {
+      document.documentElement.classList.add('wf-inset');
+      st.textContent += 'html.wf-inset .app{padding-top:8px!important;padding-bottom:0!important}' +
+        'html.wf-inset .wf{padding-top:14px!important;padding-bottom:40px!important}' +
+        'html.wf-inset .sheet>div{padding-bottom:20px!important}' +
+        'html.wf-inset .toast{bottom:24px!important}';
+    }
   } catch (e) {}
 })();
 

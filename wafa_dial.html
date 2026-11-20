@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="wafa.css?v=20261120c">
 <script src="alias_config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="alias_common.js?v=20261119w"></script>
+<script src="alias_common.js?v=20261121a"></script>
 <script src="wafa.js?v=20261120j"></script>
 <script src="padstyle.js?v=20261119f"></script>
 <style>
@@ -85,6 +85,23 @@ html,body{height:100%}
 .sheet ul{margin:0;padding-left:20px;font-size:14px;color:var(--sub);display:flex;flex-direction:column;gap:6px}
 .sheet textarea{border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:10px;font:inherit;min-height:90px}
 [hidden]{display:none!important}
+/* 🔴 2026-11-21 좁은 폰(아이폰 미니 · SE 등) — 내 번호가 해 · 언어 단추에 가려지지 않게 로고 글자는 빼고 W 만 */
+@media (max-width:400px){ .top .wf-logo{font-size:0;gap:0} .top .wf-logo i{font-size:18px} .top{gap:8px} .mine b{font-size:14px} }
+/* 🔴 2026-11-21 번호판 판을 촘촘하게 — 모양 · 소리 단추를 한 줄로, 간격은 조금씩 줄여 다이얼 · 음성 · 영상 · 문자가 한 화면에 */
+#padBar .ps-bar{flex-wrap:nowrap;gap:4px;margin:8px auto 2px}
+#padBar .ps-bar button{padding:6px 8px;font-size:12px}
+#padBar .ps-bar:has([data-mix]){flex-wrap:wrap}
+html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
+@media (max-width:360px){ #padBar .ps-bar{flex-wrap:wrap} }
+.panel{gap:8px}
+.disp{padding:5px 6px 5px 14px}.disp .del{height:44px}
+.who{margin-top:-2px}
+.page{gap:8px}
+.msg:empty{display:none}
+.panel{padding-bottom:12px}
+.sos{font-size:11.5px;margin-top:0;word-break:keep-all}
+/* 키가 작은 폰에서는 다이얼 아래 안내 글(사용법에 있음)과 네모 단추 높이를 줄임 */
+@media (max-height:760px){ #panel .ps-rot p{display:none} .keys button{aspect-ratio:1.9} .keys{gap:8px} .acts button{min-height:50px} }
 </style>
 </head>
 <body>
@@ -283,8 +300,24 @@ html,body{height:100%}
     center: function(){ var t = document.getElementById('myNo').textContent || ''; return ['WAFA', t === '—' ? '' : t, 'Wi-Fi Phone']; },
     colors: { plate:'#0F6E68', rim:'#0A4F4A', base:'#F6F1E4', ink:'#1B2430', stop:'#B9BEC4', on: cs.getPropertyValue('--brand').trim() || '#0F6E68', onInk: cs.getPropertyValue('--brand-ink').trim() || '#fff' },
     defaults: { mode:'square', key:'dtmf', rot:true },
-    lang: function(){ return EN ? 'en' : 'ko'; }
+    lang: function(){ return EN ? 'en' : 'ko'; },
+    text: { ko: { snd:'🔊', sndOff:'🔇' }, en: { snd:'🔊', sndOff:'🔇' } }
   });
+
+  /* 🔴 2026-11-21 다이얼이 화면 아래로 잘리지 않게 — 번호판 화면에 다 들어가도록 다이얼 크기를 줄임(최소 210px) */
+  var PG = document.querySelector('#pages .page'), PN = document.getElementById('panel'), fitT = 0;
+  function fitDial(){
+    fitT = 0;
+    var sv = PN.querySelector('.ps-rot svg');
+    PN.style.removeProperty('--ps-size');
+    if (!sv || !PG.clientHeight) return;
+    var over = PG.scrollHeight - PG.clientHeight;
+    if (over > 0) PN.style.setProperty('--ps-size', Math.max(210, Math.floor(sv.getBoundingClientRect().width - over - 2)) + 'px');
+  }
+  function fitSoon(){ if (!fitT) fitT = requestAnimationFrame(fitDial); }
+  try { new MutationObserver(fitSoon).observe(PN, { childList: true, subtree: true }); } catch (e) {}
+  try { new ResizeObserver(fitSoon).observe(document.getElementById('pages')); } catch (e) {}
+  window.addEventListener('resize', fitSoon); fitSoon();
 
   /* 로그인 · 내 번호 · 연락처 */
   var sess = await AL.requireLogin(); if (!sess) return;
