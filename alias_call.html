@@ -519,6 +519,11 @@ function paintActs(){
        ① 누르자마자 글씨를 바꿔 **눌렸다는 것**을 보여줍니다
        ② 끊는 도중에 문제가 생겨도 삼켜서 멈추지 않게 합니다
        ③ 3초가 지나도 화면이 안 닫히면 **그냥 나갑니다** */
+  /* 👥 2026-11-21 와파 3자 통화 — 통화 중 [＋] 로 와파 번호 한 사람 더 */
+  if (AL.call.pc && t0 && !twBusy) {
+    box.appendChild(btn('rbtn plain', '➕', vmT('한 사람 더 (3자 통화)', 'Add a person (3-way)'), twAsk));
+  }
+
   box.appendChild(btn('rbtn hang', '✕', AL.t('clHangup'), function(){
     console.log('[call] 끊기 단추를 눌렀습니다');
     setStatus(AL.t('clEnded'));                       // ①
@@ -553,7 +558,7 @@ function onState(state, extra){
   if (state === 'preparing')      setStatus(AL.t('clCalling'));
   else if (state === 'ringing')   { setStatus(AL.t('clCalling')); AL.startDialTone(); }
   else if (state === 'answering') { AL.stopDialTone(); setStatus(AL.t('clConnected')); }
-  else if (state === 'connected') { AL.stopDialTone(); setStatus(AL.t('clConnected')); startTimer(); paintActs(); paintVidNote(); ongoingStart(); backGuard(true); }
+  else if (state === 'connected') { AL.stopDialTone(); setStatus(AL.t('clConnected')); startTimer(); paintActs(); paintVidNote(); ongoingStart(); backGuard(true); twWatch(); }
   /* 🔴 2026-09-22 — 통화 중 흔들렸을 때.
      ⚠ 말없이 조용하면 손님이 끊긴 줄 알고 먼저 끊어버립니다.
        "다시 잇는 중" 을 보여줘야 기다려 줍니다.
@@ -563,7 +568,7 @@ function onState(state, extra){
   else if (state === 'no-media')  setStatus(AL.t('clNoMedia'));
   else if (state === 'failed')    { setStatus(AL.t('clFailed')); bye(); }
   else if (state === 'declined')  { setStatus(AL.t('clDeclined')); if (vmCan(state, extra)) vmOffer(state); else bye(); }
-  else if (state === 'peer-hangup') { setStatus(AL.t('clEnded')); bye(); }
+  else if (state === 'peer-hangup') { setStatus(AL.t('clEnded')); twThenBye(); }
   else if (state === 'ended')     { if (vmCan(state, extra)) { setStatus(AL.t('clNoAnswer')); vmOffer(state); } else { setStatus(AL.t('clEnded')); bye(); } }
   else if (state === 'need-wifi') { setStatus(AL.t('dtNoWifi')); bye(); }
   else if (state === 'bytes') {
@@ -734,6 +739,75 @@ function bye(stay){
      ⚠ 통화가 아니라 메시지라 통화 시간에서 빠지지 않습니다.
      ⚠ 내가 [✕] 로 먼저 끊었을 때는 묻지 않습니다(reason = canceled).
    ===================================================================== */
+/* =====================================================================
+   👥 와파 3자 통화 (2026-11-21)
+     통화 중 [➕] → 와파 번호 10자리 → 서버(wafa_three_way)가 세 사람만의 방을 만들고
+     나는 그 방 통화(alias_gcall.html)로 옮깁니다. 상대 화면은 끊김을 받는 순간(또는 3초마다)
+     wafa_three_way_room 으로 방을 찾아 따라옵니다. 새로 부른 사람에게는 「3자 통화 초대」 알림.
+   ===================================================================== */
+var twBusy = false, twTimer = null;
+function twGo(room){
+  twBusy = true;
+  if (twTimer) { clearInterval(twTimer); twTimer = null; }
+  leaving = true;
+  try { ongoingStop(); } catch (e) {}
+  try { AL.stopRinging(); AL.stopDialTone(); } catch (e) {}
+  setStatus(vmT('3자 통화로 옮기는 중…', 'Moving to a 3-way call…'));
+  el('acts').innerHTML = '';
+  setTimeout(function(){ leaveTo('alias_gcall.html?link=' + encodeURIComponent(room) + '&type=' + encodeURIComponent(callType)); }, 600);
+}
+async function twRoom(){
+  try { var r = await AL.sb.rpc('wafa_three_way_room', { p_link: linkId }); return (r && !r.error && r.data) || null; } catch (e) { return null; }
+}
+function twWatch(){
+  if (twTimer) return;
+  twTimer = setInterval(async function(){
+    if (twBusy || leaving) { clearInterval(twTimer); twTimer = null; return; }
+    var room = await twRoom();
+    if (room && !twBusy) { try { AL.endCall('completed'); } catch (e) {} twGo(room); }
+  }, 3000);
+}
+async function twThenBye(){
+  if (twBusy) return;
+  var room = await twRoom();
+  if (room) twGo(room); else bye();
+}
+function twAsk(){
+  if (document.getElementById('twBox')) return;
+  var en = AL.lang === 'en';
+  var bg = document.createElement('div'); bg.id = 'twBox';
+  bg.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center';
+  bg.innerHTML = '<div style="background:#16202C;color:#E8EEF5;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px">' +
+    '<b style="font-size:18px">' + (en ? '👥 Add a person' : '👥 한 사람 더 부르기') + '</b>' +
+    '<span style="font-size:13.5px;opacity:.75">' + (en ? 'Enter a 10-digit WAFA number. All three of you move to a 3-way call.' : '와파 번호 10자리를 넣으면 세 사람이 함께 통화합니다.') + '</span>' +
+    '<input id="twNo" inputmode="numeric" maxlength="12" placeholder="4829-051-318" style="border:1.5px solid #34465A;background:#0E1621;color:#fff;border-radius:12px;padding:12px;font:700 20px ui-monospace,monospace;letter-spacing:.05em">' +
+    '<p id="twMsg" style="margin:0;font-size:14px;color:#FF9B8F;min-height:18px"></p>' +
+    '<div style="display:flex;gap:8px"><button id="twCancel" style="flex:1;min-height:50px;border:0;border-radius:14px;background:#2A3645;color:#fff;font:inherit;font-weight:800">' + (en ? 'Cancel' : '취소') + '</button>' +
+    '<button id="twGo" style="flex:2;min-height:50px;border:0;border-radius:14px;background:#1E9E5A;color:#fff;font:inherit;font-weight:800">' + (en ? 'Call and join' : '불러서 함께 통화') + '</button></div></div>';
+  document.body.appendChild(bg);
+  var inp = document.getElementById('twNo');
+  inp.oninput = function(){ var v = inp.value.replace(/\D/g, '').slice(0, 10); inp.value = v.length > 7 ? v.slice(0, 4) + '-' + v.slice(4, 7) + '-' + v.slice(7) : v.length > 4 ? v.slice(0, 4) + '-' + v.slice(4) : v; };
+  document.getElementById('twCancel').onclick = function(){ bg.remove(); };
+  document.getElementById('twGo').onclick = async function(){
+    var n = inp.value.replace(/\D/g, ''), M = document.getElementById('twMsg');
+    var E = { none: ['없는 와파 번호예요', 'No such WAFA number'], self: ['내 번호예요', 'That is your own number'],
+              already: ['이미 통화 중인 사람이에요', 'Already in this call'], off: ['상대가 지금 전화를 받지 않게 해 두었어요', 'Not taking calls now'],
+              need_plan: ['3자 통화는 구독이 있어야 해요', 'A plan is needed'], need_addon: ['이번 달 통화 시간을 다 썼어요', 'Minutes used up'],
+              slow_down: ['잠시 뒤에 다시 해 주세요', 'Please try again later'], net: ['연결이 잠시 안 돼요. 다시 눌러 주세요.', 'Connection problem. Try again.'] };
+    if (n.length !== 10) { M.textContent = en ? 'Enter all 10 digits' : '번호 10자리를 넣어 주세요'; return; }
+    this.disabled = true; M.textContent = '';
+    var r = null; try { r = await AL.sb.rpc('wafa_three_way', { p_link: linkId, p_number: n, p_kind: callType }); } catch (e) { r = null; }
+    var o = (r && !r.error && r.data) || { error: 'net' };
+    if (!o.ok) { this.disabled = false; M.textContent = (E[o.error] || E.net)[en ? 1 : 0]; return; }
+    bg.remove();
+    try { sessionStorage.setItem('wafa3_invite', JSON.stringify({ room: o.room, number: n, at: Date.now() })); } catch (e) {}
+    twBusy = true;
+    try { AL.endCall('completed'); } catch (e) {}
+    twGo(o.room);
+  };
+  setTimeout(function(){ inp.focus(); }, 50);
+}
+
 var VM_MAX = 60000, vmRec = null, vmShown = false;
 function vmT(ko, en){ return AL.lang === 'en' ? en : ko; }
 function vmCan(state, extra){
