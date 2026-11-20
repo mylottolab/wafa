@@ -562,9 +562,9 @@ function onState(state, extra){
   else if (state === 'reconnected')  { setStatus(AL.t('clConnected')); }
   else if (state === 'no-media')  setStatus(AL.t('clNoMedia'));
   else if (state === 'failed')    { setStatus(AL.t('clFailed')); bye(); }
-  else if (state === 'declined')  { setStatus(AL.t('clDeclined')); bye(); }
+  else if (state === 'declined')  { setStatus(AL.t('clDeclined')); if (vmCan(state, extra)) vmOffer(state); else bye(); }
   else if (state === 'peer-hangup') { setStatus(AL.t('clEnded')); bye(); }
-  else if (state === 'ended')     { setStatus(AL.t('clEnded')); bye(); }
+  else if (state === 'ended')     { if (vmCan(state, extra)) { setStatus(AL.t('clNoAnswer')); vmOffer(state); } else { setStatus(AL.t('clEnded')); bye(); } }
   else if (state === 'need-wifi') { setStatus(AL.t('dtNoWifi')); bye(); }
   else if (state === 'bytes') {
     // ⚠ 통화 중에 얼마나 쓰는지 보여줍니다. 모르면 불안합니다.
@@ -706,7 +706,7 @@ function onState(state, extra){
      **이 줄을 지우지 마세요.** */
 var leaving = false;
 
-function bye(){
+function bye(stay){
   ongoingStop();          // 🔴 2026-09-22 — 통화 중 알림줄 끄기
   if (leaving) return;
   leaving = true;
@@ -721,8 +721,99 @@ function bye(){
   const vw = document.querySelector('.vidwarn');
   if (vw) vw.remove();
   el('bytes').textContent = '';
+  if (stay) return;       // 🔴 2026-11-21 와파 음성사서함 — 화면에 남아 [음성 메시지 남기기] 를 보여 줌
   // 잠깐 보여준 뒤 대화로 돌아갑니다.
   goChat(1600);
+}
+
+/* =====================================================================
+   📮 와파 음성사서함 (2026-11-21)
+     내가 건 전화를 상대가 안 받았거나(40초) 거절했으면, 바로 나가지 않고
+     [🎙 음성 메시지 남기기] [닫기] 를 보여 줍니다. 최대 60초 녹음 → 두 사람 대화방에
+     「📮 음성사서함」 음성 메시지로 보냅니다(받는 사람은 알림 + 와파 연락처 맨 위 📮 에서 듣기).
+     ⚠ 통화가 아니라 메시지라 통화 시간에서 빠지지 않습니다.
+     ⚠ 내가 [✕] 로 먼저 끊었을 때는 묻지 않습니다(reason = canceled).
+   ===================================================================== */
+var VM_MAX = 60000, vmRec = null, vmShown = false;
+function vmT(ko, en){ return AL.lang === 'en' ? en : ko; }
+function vmCan(state, extra){
+  if (incoming || t0 || vmShown || !linkId || !view || !view.my_side_id) return false;
+  if (!window.MediaRecorder || !navigator.mediaDevices) return false;
+  if (state === 'declined') return true;
+  var why = extra && extra.reason;
+  return state === 'ended' && (why === 'no_answer' || why === 'busy' || why === 'declined');
+}
+function vmBtn(txt, bg, fn){
+  var b = document.createElement('button');
+  b.type = 'button'; b.textContent = txt;
+  b.style.cssText = 'margin:6px;padding:14px 20px;border:0;border-radius:14px;font:inherit;font-weight:800;font-size:16px;cursor:pointer;color:#fff;background:' + bg;
+  b.addEventListener('click', fn);
+  return b;
+}
+function vmOffer(state){
+  vmShown = true;
+  bye(true);
+  el('bytes').textContent = vmT('음성 메시지를 남길 수 있어요 (최대 1분)', 'You can leave a voice message (up to 1 min)');
+  var a = el('acts'); a.innerHTML = '';
+  a.appendChild(vmBtn(vmT('🎙 음성 메시지 남기기', '🎙 Leave a message'), '#0F6E68', vmStart));
+  a.appendChild(vmBtn(vmT('닫기', 'Close'), 'rgba(128,128,128,.4)', function(){ goChat(0); }));
+  /* 아무것도 안 누르면 30초 뒤 대화방으로 */
+  setTimeout(function(){ if (!vmRec && vmShown !== 'sent') goChat(0); }, 30000);
+}
+async function vmStart(){
+  var a = el('acts');
+  try {
+    var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    var types = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'];
+    var mime = types.filter(function(t){ try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } })[0] || '';
+    var rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    var chunks = [], st = Date.now();
+    rec.ondataavailable = function(e){ if (e.data && e.data.size) chunks.push(e.data); };
+    rec.start(1000);
+    vmRec = { rec: rec, stream: stream, chunks: chunks, st: st, mime: mime || rec.mimeType || 'audio/webm' };
+    vmRec.tick = setInterval(function(){
+      var ms = Date.now() - st;
+      el('bytes').textContent = '🔴 ' + vmT('녹음 중', 'Recording') + ' ' + Math.floor(ms / 60000) + ':' + String(Math.floor(ms / 1000) % 60).padStart(2, '0') + ' / 1:00';
+      if (ms >= VM_MAX) vmStop(true);
+    }, 250);
+    setStatus(vmT('지금 말씀하세요', 'Speak now'));
+    a.innerHTML = '';
+    a.appendChild(vmBtn(vmT('■ 보내기', '■ Send'), '#1E9E5A', function(){ vmStop(true); }));
+    a.appendChild(vmBtn(vmT('취소', 'Cancel'), 'rgba(128,128,128,.4)', function(){ vmStop(false); }));
+  } catch (e) {
+    console.warn('[vm] 마이크 실패', e);
+    el('bytes').textContent = vmT('마이크를 쓸 수 없어요. 대화방에서 문자를 남겨 주세요.', 'Microphone unavailable. Leave a text in the chat.');
+    a.innerHTML = '';
+    a.appendChild(vmBtn(vmT('💬 대화방으로', '💬 Open chat'), '#0F6E68', function(){ goChat(0); }));
+  }
+}
+function vmStop(send){
+  var r = vmRec; if (!r || r.stopping) return; r.stopping = true;
+  clearInterval(r.tick);
+  var ms = Math.min(Date.now() - r.st, VM_MAX);
+  r.rec.onstop = async function(){
+    r.stream.getTracks().forEach(function(t){ t.stop(); });
+    if (!send || ms < 800 || !r.chunks.length) { goChat(0); return; }
+    var a = el('acts'); a.innerHTML = '';
+    el('bytes').textContent = vmT('보내는 중…', 'Sending…');
+    try {
+      var type = (r.mime || 'audio/webm').split(';')[0];
+      var ext = type.indexOf('mp4') >= 0 ? 'm4a' : (type.indexOf('ogg') >= 0 ? 'ogg' : 'webm');
+      var file = new File([new Blob(r.chunks, { type: type })], 'voicemail_' + Date.now() + '.' + ext, { type: type });
+      var media = await AL.uploadMedia(linkId, view.my_side_id, file);
+      media.durationMs = ms;
+      await AL.callFn('alias-message-send', { linkId: linkId, text: vmT('📮 음성사서함', '📮 Voicemail'), media: media });
+      vmShown = 'sent';
+      setStatus(vmT('음성 메시지를 남겼어요', 'Message left'));
+      el('bytes').textContent = '';
+      goChat(1400);
+    } catch (e) {
+      console.error('[vm] 보내기 실패', e);
+      el('bytes').textContent = vmT('보내지 못했어요. 대화방에서 다시 남겨 주세요.', 'Could not send. Please try again in the chat.');
+      a.appendChild(vmBtn(vmT('💬 대화방으로', '💬 Open chat'), '#0F6E68', function(){ goChat(0); }));
+    }
+  };
+  try { r.rec.stop(); } catch (e) { goChat(0); }
 }
 
 /* =====================================================================

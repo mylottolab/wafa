@@ -11,6 +11,7 @@
 <script src="alias_common.js?v=20261121b"></script>
 <script src="wafa.js?v=20261120j"></script>
 <script src="padstyle.js?v=20261119f"></script>
+<script src="alias_media.js?v=20260927a"></script>
 <style>
 /* 와파 전화 — 앱을 열면 [번호판] [연락처] 두 화면이 바로 (2026-11-20)
    번호판 판 안의 순서: 모양 · 소리 → 누른 번호(오른쪽 ⌫) → 번호판 → 음성 · 영상 · 문자. 112 · 119 안내는 판 밖 맨 아래 */
@@ -85,6 +86,11 @@ html,body{height:100%}
 .sheet ul{margin:0;padding-left:20px;font-size:14px;color:var(--sub);display:flex;flex-direction:column;gap:6px}
 .sheet textarea{border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:10px;font:inherit;min-height:90px}
 [hidden]{display:none!important}
+/* 📮 음성사서함 */
+.vm .tx span{font-family:inherit}
+.vm.new .tx b::after{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn);margin-left:6px;vertical-align:middle}
+.vm .act button.p{background:var(--brand);color:var(--brand-ink)}
+.ptabs .badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--warn);color:#fff;font-size:11px;line-height:18px}
 /* 🔴 2026-11-21 좁은 폰(아이폰 미니 · SE 등) — 내 번호가 해 · 언어 단추에 가려지지 않게 로고 글자는 빼고 W 만 */
 @media (max-width:400px){ .top .wf-logo{font-size:0;gap:0} .top .wf-logo i{font-size:18px} .top{gap:8px} .mine b{font-size:14px} }
 /* 🔴 2026-11-21 번호판 판을 촘촘하게 — 모양 · 소리 단추를 한 줄로, 간격은 조금씩 줄여 다이얼 · 음성 · 영상 · 문자가 한 화면에 */
@@ -140,6 +146,7 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
     <!-- ② 연락처 -->
     <section class="page px">
       <div class="search"><input id="q" type="search" autocomplete="off"><a href="alias_contacts.html" data-d="private"></a></div>
+      <div id="vmBox" hidden><div class="sec" data-d="vmT"></div><div class="list" id="vmList"></div></div>
       <div class="sec" data-d="recent"></div>
       <div class="list" id="list"><div class="empty" data-d="loading"></div></div>
     </section>
@@ -185,6 +192,7 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
     private: ['💬 별칭 전화', '💬 Private'], recent: ['와파 번호로 이어진 사람', 'People on Open Line'],
     loading: ['불러오는 중…', 'Loading…'], none: ['아직 없어요. 번호판에서 와파 번호로 걸면 여기에 생깁니다.', 'No one yet. Call a WAFA number from the keypad and they appear here.'],
     search: ['이름이나 번호로 찾기', 'Search name or number'],
+    vmT: ['📮 음성사서함', '📮 Voicemail'], vmOpen: ['대화', 'Chat'],
     navHelp: ['사용법', 'Help'], navUsage: ['내 사용량', 'My usage'], navPlan: ['요금', 'Plans'], navSet: ['설정', 'Settings'],
     ok: ['알겠어요', 'Got it'], cancel: ['취소', 'Cancel'],
     noteT: ['문자 보내기', 'Send a text'], noteGo: ['보내고 대화 열기', 'Send and open chat'],
@@ -268,9 +276,46 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
     else if (x) { digits = L[+x.dataset.i].number; draw(); go(0); }
   };
 
+  /* 📮 음성사서함 — 안 받은 전화에 남긴 음성 메시지(최근 30개). ▶ 바로 듣기 · 💬 대화방 */
+  var vms = [], vmAudio = null, VMK = 'wafa_vm_seen';
+  function vmSeen(){ try { return localStorage.getItem(VMK) || ''; } catch (e) { return ''; } }
+  function vmAgo(t){ var x = new Date(t), now = new Date(), same = x.toDateString() === now.toDateString();
+    return same ? x.toLocaleTimeString(EN ? 'en-US' : 'ko-KR', { hour: 'numeric', minute: '2-digit' }) : x.toLocaleDateString(EN ? 'en-US' : 'ko-KR', { month: 'short', day: 'numeric' }); }
+  function vmDur(ms){ var s = Math.round((ms || 0) / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  function drawVm(){
+    var box = document.getElementById('vmBox'), seen = vmSeen();
+    box.hidden = !vms.length;
+    document.getElementById('vmList').innerHTML = vms.map(function(v, i){
+      var nm = v.name || (v.number ? fmt(v.number) : '?');
+      return '<div class="ct vm' + (v.at > seen ? ' new' : '') + '"><span class="av">📮</span><div class="tx" data-o="' + i + '"><b>' + WF.esc(nm) + '</b>' +
+        '<span>' + WF.esc(vmAgo(v.at)) + ' · ' + vmDur(v.ms) + '</span></div>' +
+        '<div class="act"><button data-o="' + i + '" aria-label="chat">💬</button><button class="p" data-p="' + i + '" aria-label="play">▶</button></div></div>'; }).join('');
+    var n = vms.filter(function(v){ return v.at > seen; }).length, tb = document.querySelector('.ptabs [data-p="1"]');
+    tb.innerHTML = WF.esc(d('tabCt')) + (n ? '<span class="badge">' + n + '</span>' : '');
+  }
+  function vmMarkSeen(){ if (vms[0]) { try { localStorage.setItem(VMK, vms[0].at); } catch (e) {} } }
+  document.getElementById('vmList').onclick = async function(e){
+    var o = e.target.closest('[data-o]'), pb = e.target.closest('[data-p]');
+    if (o) { location.href = 'alias_chat.html?link=' + encodeURIComponent(vms[+o.dataset.o].link_id); return; }
+    if (!pb) return;
+    if (vmAudio && vmAudio._b === pb) { vmAudio.pause(); vmAudio = null; pb.textContent = '▶'; return; }
+    if (vmAudio) { vmAudio.pause(); vmAudio._b.textContent = '▶'; vmAudio = null; }
+    try {
+      pb.textContent = '…';
+      var a = new Audio(await AL.mediaUrl(vms[+pb.dataset.p].path)); a._b = pb; vmAudio = a;
+      a.onended = function(){ pb.textContent = '▶'; if (vmAudio === a) vmAudio = null; };
+      await a.play(); pb.textContent = '❚❚';
+    } catch (er) { console.warn('[vm] 재생 실패', er); pb.textContent = '▶'; vmAudio = null; }
+  };
+  async function loadVm(){
+    try { var r = await AL.sb.rpc('wafa_voicemails', { p_limit: 30 }); vms = (r && !r.error && r.data) || []; } catch (e) { vms = []; }
+    drawVm();
+  }
+
   /* 두 화면 */
   var pages = document.getElementById('pages');
-  function mark(i){ document.querySelectorAll('.ptabs button').forEach(function(b){ b.classList.toggle('on', +b.dataset.p === i); }); }
+  function mark(i){ document.querySelectorAll('.ptabs button').forEach(function(b){ b.classList.toggle('on', +b.dataset.p === i); });
+    if (i === 1 && vms.length) { setTimeout(function(){ vmMarkSeen(); var tb = document.querySelector('.ptabs [data-p="1"] .badge'); if (tb) tb.remove(); }, 1500); } }
   function go(i){ pages.scrollTo({ left: i * pages.clientWidth, behavior: 'smooth' }); mark(i); }
   document.querySelector('.ptabs').onclick = function(e){ var b = e.target.closest('[data-p]'); if (b) go(+b.dataset.p); };
   pages.addEventListener('scroll', function(){ mark(Math.round(pages.scrollLeft / pages.clientWidth)); }, { passive: true });
@@ -331,7 +376,7 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
     PS.repaint();
   } catch (e) {}
   try { var r = await AL.sb.rpc('wafa_contacts'); contacts = (r && r.data) || []; } catch (e) { contacts = []; }
-  drawContacts(); draw();
+  drawContacts(); draw(); loadVm();
   var q0 = new URLSearchParams(location.search).get('n'); if (q0 && /^\d{10}$/.test(q0)) { digits = q0; draw(); }
 })();
 </script>
