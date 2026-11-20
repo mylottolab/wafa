@@ -558,7 +558,7 @@ function onState(state, extra){
   if (state === 'preparing')      setStatus(AL.t('clCalling'));
   else if (state === 'ringing')   { setStatus(AL.t('clCalling')); AL.startDialTone(); }
   else if (state === 'answering') { AL.stopDialTone(); setStatus(AL.t('clConnected')); }
-  else if (state === 'connected') { AL.stopDialTone(); setStatus(AL.t('clConnected')); startTimer(); paintActs(); paintVidNote(); ongoingStart(); backGuard(true); twWatch(); }
+  else if (state === 'connected') { AL.stopDialTone(); setStatus(AL.t('clConnected')); startTimer(); paintActs(); paintVidNote(); ongoingStart(); backGuard(true); twWatch(); cwWatch(); }
   /* 🔴 2026-09-22 — 통화 중 흔들렸을 때.
      ⚠ 말없이 조용하면 손님이 끊긴 줄 알고 먼저 끊어버립니다.
        "다시 잇는 중" 을 보여줘야 기다려 줍니다.
@@ -726,6 +726,7 @@ function bye(stay){
   const vw = document.querySelector('.vidwarn');
   if (vw) vw.remove();
   el('bytes').textContent = '';
+  try { cwStop(); } catch (e) {}
   if (stay) return;       // 🔴 2026-11-21 와파 음성사서함 — 화면에 남아 [음성 메시지 남기기] 를 보여 줌
   // 잠깐 보여준 뒤 대화로 돌아갑니다.
   goChat(1600);
@@ -806,6 +807,71 @@ function twAsk(){
     twGo(o.room);
   };
   setTimeout(function(){ inp.focus(); }, 50);
+}
+
+/* =====================================================================
+   ⏳ 와파 통화 중 대기 (2026-11-21)
+     통화 중 3초마다 wafa_waiting_call 로 "나에게 새로 걸려 온 전화" 를 봅니다.
+     있으면 위쪽에 띠 + 짧은 삐삐 소리: [끊고 받기] [거절] [💬 통화 중이라고 문자]
+     ⚠ 거절하면 건 사람 쪽은 착신전환(안 받을 때) → 음성사서함 순서로 이어집니다.
+     ⚠ 보류(두 통화를 오가기)는 지금은 없습니다 — 하나를 끊고 받습니다.
+   ===================================================================== */
+var cwTimer = null, cwShown = null, cwSkip = {}, cwBeep = null;
+function cwWatch(){
+  if (cwTimer) return;
+  cwTimer = setInterval(async function(){
+    if (leaving || twBusy) { cwStop(); return; }
+    var w = null;
+    try { var r = await AL.sb.rpc('wafa_waiting_call', { p_except: (AL.call && AL.call.callId) || callId || null }); w = (r && !r.error && r.data) || null; } catch (e) {}
+    if (w && w.id && !cwSkip[w.id]) { if (!cwShown || cwShown.id !== w.id) cwShow(w); }
+    else if (cwShown) cwHide();
+  }, 3000);
+}
+function cwStop(){ if (cwTimer) { clearInterval(cwTimer); cwTimer = null; } cwHide(); }
+function cwTone(){
+  try {
+    var C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+    var ac = cwTone.ac || (cwTone.ac = new C()), t = ac.currentTime;
+    [0, 0.25].forEach(function(d){ var o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 440;
+      g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.12, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.18);
+      o.connect(g); g.connect(ac.destination); o.start(t + d); o.stop(t + d + 0.2); });
+  } catch (e) {}
+}
+function cwHide(){
+  var b = document.getElementById('cwBar'); if (b) b.remove();
+  if (cwBeep) { clearInterval(cwBeep); cwBeep = null; }
+  cwShown = null;
+}
+function cwShow(w){
+  cwHide(); cwShown = w;
+  var en = AL.lang === 'en', nm = w.name || (en ? 'Someone' : '누군가');
+  var bar = document.createElement('div'); bar.id = 'cwBar';
+  bar.style.cssText = 'position:fixed;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top,0px));z-index:9997;background:#1C2A3A;color:#fff;border:1px solid #2F4258;border-radius:16px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:8px';
+  var bs = 'flex:1;min-height:42px;border:0;border-radius:12px;color:#fff;font:inherit;font-weight:800;font-size:14px;cursor:pointer;';
+  bar.innerHTML = '<div style="font-weight:800;font-size:15.5px">⏳ ' + AL.esc(nm) + (en ? ' is calling' : ' 님 전화 대기 중') +
+      (w.type === 'video' ? (en ? ' (video)' : ' (영상)') : '') + '</div>' +
+    '<div style="display:flex;gap:6px">' +
+      '<button data-cw="take" style="' + bs + 'background:#1E9E5A">' + (en ? 'End & answer' : '끊고 받기') + '</button>' +
+      '<button data-cw="no" style="' + bs + 'background:#C0392B">' + (en ? 'Decline' : '거절') + '</button>' +
+      '<button data-cw="msg" style="' + bs + 'background:#34495E">' + (en ? '💬 Busy' : '💬 통화 중') + '</button></div>';
+  document.body.appendChild(bar);
+  cwTone(); cwBeep = setInterval(cwTone, 4000);
+  bar.onclick = async function(e){
+    var b = e.target.closest('[data-cw]'); if (!b) return;
+    var k = b.dataset.cw; cwSkip[w.id] = 1; cwHide();
+    if (k === 'take') {
+      leaving = true; twBusy = true; cwStop();
+      try { await AL.endCall('completed'); } catch (er) {}
+      leaveTo('alias_call.html?call=' + encodeURIComponent(w.id) + '&token=' + encodeURIComponent(w.token || '') +
+              '&link=' + encodeURIComponent(w.link_id) + '&type=' + encodeURIComponent(w.type || 'voice'));
+      return;
+    }
+    if (k === 'msg') {
+      try { await AL.callFn('alias-message-send', { linkId: w.link_id,
+        text: en ? 'I’m on another call. I’ll call you back soon.' : '지금 통화 중이에요. 끝나고 바로 연락드릴게요.' }); } catch (er) { console.warn('[cw] 문자 실패', er); }
+    }
+    try { await AL.declineCall(w.id); } catch (er) {}
+  };
 }
 
 var VM_MAX = 60000, vmRec = null, vmShown = false;
