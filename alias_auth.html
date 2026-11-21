@@ -222,7 +222,7 @@ async function start(){
 
   try {
     const email = AL.nicknameToEmail(nickCheck.nick);
-    const signUpRes = await AL.sb.auth.signUp({ email: email, password: pw, options: { data: { app: 'burum' } } });   // 🔴 2026-11-09 앱별 가입 통계
+    const signUpRes = await AL.sb.auth.signUp({ email: email, password: pw, options: { data: { app: 'wafa' } } });   // 🔴 2026-11-09 앱별 가입 통계
 
     const msg = String((signUpRes.error && signUpRes.error.message) || '').toLowerCase();
     const taken = msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already');
