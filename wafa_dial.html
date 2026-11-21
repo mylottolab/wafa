@@ -33,7 +33,7 @@ html,body{height:100%}
 .strip{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub);padding:6px 12px;background:var(--soft);border-radius:12px;margin-top:4px}
 .strip .dot{width:8px;height:8px;border-radius:50%;background:var(--call);flex:0 0 auto}
 .strip.off .dot{background:var(--warn)}
-.ptabs{display:grid;grid-template-columns:1fr 1fr;background:var(--chip);border-radius:14px;padding:4px;margin-top:10px}
+.ptabs{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--chip);border-radius:14px;padding:4px;margin-top:10px}
 .ptabs button{border:0;background:none;color:var(--sub);font:inherit;font-weight:800;padding:9px 0;border-radius:11px;cursor:pointer}
 .ptabs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .pages{flex:1;min-height:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-top:8px}
@@ -91,6 +91,11 @@ html,body{height:100%}
 .vm.new .tx b::after{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn);margin-left:6px;vertical-align:middle}
 .vm .act button.p{background:var(--brand);color:var(--brand-ink)}
 .ptabs .badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--warn);color:#fff;font-size:11px;line-height:18px}
+/* 🕘 최근 기록 */
+.rc .tx b.miss{color:var(--warn)}
+.rc .tx .dir{font-weight:800}.rc .tx .dir.miss{color:var(--warn)}
+.rc .av{font-size:18px}
+.rc .act .t{font-size:12px;color:var(--sub);white-space:nowrap;align-self:center}
 /* 🔴 2026-11-21 좁은 폰(아이폰 미니 · SE 등) — 내 번호가 해 · 언어 단추에 가려지지 않게 로고 글자는 빼고 W 만 */
 @media (max-width:400px){ .top .wf-logo{font-size:0;gap:0} .top .wf-logo i{font-size:18px} .top{gap:8px} .mine b{font-size:14px} }
 /* 🔴 2026-11-21 번호판 판을 촘촘하게 — 모양 · 소리 단추를 한 줄로, 간격은 조금씩 줄여 다이얼 · 음성 · 영상 · 문자가 한 화면에 */
@@ -121,7 +126,7 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
     </div>
     <div class="strip" id="strip"><span class="dot"></span><span id="stripTx"></span></div>
     <a class="getnum" id="getNum" href="wafa_number.html" hidden><b></b><span></span></a>
-    <div class="ptabs"><button data-p="0" data-d="tabPad"></button><button data-p="1" data-d="tabCt"></button></div>
+    <div class="ptabs"><button data-p="0" data-d="tabPad"></button><button data-p="1" data-d="tabRc"></button><button data-p="2" data-d="tabCt"></button></div>
   </div>
 
   <div class="pages" id="pages">
@@ -143,10 +148,16 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
       <p class="sos" data-d="sos"></p>
     </section>
 
-    <!-- ② 연락처 -->
+    <!-- ② 최근 기록 (2026-11-21) — 건 · 받은 · 부재중 통화, 최근 것부터. 맨 위 📮 음성사서함 -->
+    <section class="page px">
+      <div id="vmBox" hidden><div class="sec" data-d="vmT"></div><div class="list" id="vmList"></div></div>
+      <div class="sec" data-d="rcT"></div>
+      <div class="list" id="rcList"><div class="empty" data-d="loading"></div></div>
+    </section>
+
+    <!-- ③ 연락처 -->
     <section class="page px">
       <div class="search"><input id="q" type="search" autocomplete="off"><a href="alias_contacts.html" data-d="private"></a></div>
-      <div id="vmBox" hidden><div class="sec" data-d="vmT"></div><div class="list" id="vmList"></div></div>
       <div class="sec" data-d="recent"></div>
       <div class="list" id="list"><div class="empty" data-d="loading"></div></div>
     </section>
@@ -173,7 +184,10 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
   'use strict';
   var EN = !!WF.en;
   var D = {
-    myNo: ['내 와파 번호', 'My WAFA number'], tabPad: ['☎ 번호판', '☎ Keypad'], tabCt: ['👥 연락처', '👥 Contacts'],
+    myNo: ['내 와파 번호', 'My WAFA number'], tabPad: ['☎ 번호판', '☎ Keypad'], tabCt: ['👥 연락처', '👥 Contacts'], tabRc: ['🕘 최근', '🕘 Recents'],
+    rcT: ['최근 통화', 'Recent calls'], rcNone: ['아직 통화 기록이 없어요.', 'No calls yet.'],
+    rcIn: ['받음', 'Incoming'], rcOut: ['건 전화', 'Outgoing'], rcMissed: ['부재중', 'Missed'], rcNoAns: ['안 받음', 'No answer'],
+    rcRejIn: ['거절함', 'Declined'], rcRejOut: ['거절됨', 'Declined'], rcVid: ['영상', 'Video'], rcGroup: ['3자 · 단체', 'Group'],
     wifiOn: ['인터넷 연결됨 · 전화를 걸고 받을 수 있어요', 'Online · you can call and answer'],
     wifiOff: ['인터넷이 끊겼어요 · 와이파이나 핫스팟을 켜 주세요', 'No internet · turn on Wi-Fi or a hotspot'],
     enter: ['와파 번호 10자리', '10-digit WAFA number'], unknown: ['연락처에 없는 번호', 'Not in your contacts'],
@@ -295,9 +309,10 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
         '<span>' + WF.esc(vmAgo(v.at)) + ' · ' + vmDur(v.ms) + '</span></div>' +
         '<div class="act"><button data-o="' + i + '" aria-label="chat">💬</button><button class="p" data-p="' + i + '" aria-label="play">▶</button></div></div>'; }).join('');
     var n = vms.filter(function(v){ return v.at > seen; }).length, tb = document.querySelector('.ptabs [data-p="1"]');
-    tb.innerHTML = WF.esc(d('tabCt')) + (n ? '<span class="badge">' + n + '</span>' : '');
+    n += rcUnseen();
+    tb.innerHTML = WF.esc(d('tabRc')) + (n ? '<span class="badge">' + n + '</span>' : '');
   }
-  function vmMarkSeen(){ if (vms[0]) { try { localStorage.setItem(VMK, vms[0].at); } catch (e) {} } }
+  function vmMarkSeen(){ if (vms[0]) { try { localStorage.setItem(VMK, vms[0].at); } catch (e) {} } rcMarkSeen(); }
   document.getElementById('vmList').onclick = async function(e){
     var o = e.target.closest('[data-o]'), pb = e.target.closest('[data-p]');
     if (o) { location.href = 'alias_chat.html?link=' + encodeURIComponent(vms[+o.dataset.o].link_id); return; }
@@ -316,10 +331,55 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
     drawVm();
   }
 
+  /* 🕘 최근 기록 — 부름과 같은 통화 기록(my_calls). 줄을 누르면 다시 걸기(와파 번호가 있으면 번호로, 없으면 그 대화방으로) */
+  var rcs = [], RCK = 'wafa_rc_seen';
+  function rcSeen(){ try { return localStorage.getItem(RCK) || ''; } catch (e) { return ''; } }
+  function rcMissed(r){ return !r.outgoing && (r.ended_reason === 'no_answer' || r.ended_reason === 'missed'); }
+  function rcUnseen(){ var s0 = rcSeen(); return rcs.filter(function(r){ return rcMissed(r) && r.created_at > s0; }).length; }
+  function rcMarkSeen(){ if (rcs[0]) { try { localStorage.setItem(RCK, rcs[0].created_at); } catch (e) {} } }
+  function rcNum(r){ for (var i = 0; i < contacts.length; i++) if (contacts[i].link_id === r.link_id) return contacts[i].number; return ''; }
+  function rcDir(r){
+    var w = r.ended_reason;
+    if (w === 'declined') return d(r.outgoing ? 'rcRejOut' : 'rcRejIn');
+    if (w === 'no_answer' || w === 'missed') return d(r.outgoing ? 'rcNoAns' : 'rcMissed');
+    return d(r.outgoing ? 'rcOut' : 'rcIn');
+  }
+  function drawRc(){
+    var box = document.getElementById('rcList');
+    if (!rcs.length) { box.innerHTML = '<div class="empty">' + WF.esc(d('rcNone')) + '</div>'; return; }
+    box.innerHTML = rcs.map(function(r, i){
+      var num = rcNum(r), nm = r.peer_label || r.peer_display || (num ? fmt(num) : '?'), miss = rcMissed(r);
+      var icon = r.outgoing ? '↗' : (miss ? '↙' : '↙');
+      var dur = r.duration_seconds ? ' · ' + Math.floor(r.duration_seconds / 60) + ':' + String(r.duration_seconds % 60).padStart(2, '0') : '';
+      var vid = r.call_type === 'video' ? ' · 🎥' : '';
+      return '<div class="ct rc"><span class="av">' + (r.call_type === 'video' ? '🎥' : '📞') + '</span>' +
+        '<div class="tx" data-r="' + i + '"><b class="' + (miss ? 'miss' : '') + '">' + WF.esc(nm) + '</b>' +
+        '<span><span class="dir' + (miss ? ' miss' : '') + '">' + icon + ' ' + WF.esc(rcDir(r)) + '</span>' + dur +
+        (num && (r.peer_label || r.peer_display) ? ' · ' + WF.esc(fmt(num)) : '') + '</span></div>' +
+        '<div class="act"><span class="t">' + WF.esc(vmAgo(r.created_at)) + '</span>' +
+        '<button class="c" data-rv="' + i + '" aria-label="call">📞</button></div></div>'; }).join('');
+  }
+  function rcCall(r, kind){
+    var num = rcNum(r);
+    if (num) { dial(kind, num); return; }
+    location.href = 'alias_call.html?link=' + encodeURIComponent(r.link_id) + '&type=' + kind + '&once=' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+  document.getElementById('rcList').onclick = function(e){
+    var b = e.target.closest('[data-rv]'), x = e.target.closest('[data-r]');
+    if (b) { rcCall(rcs[+b.dataset.rv], 'voice'); return; }
+    if (x) { var r = rcs[+x.dataset.r], num = rcNum(r);
+      if (num) { digits = num; draw(); go(0); } else location.href = 'alias_chat.html?link=' + encodeURIComponent(r.link_id); }
+  };
+  async function loadRc(){
+    try { var r = await AL.sb.rpc('my_calls', { p_limit: 60 }); rcs = (r && !r.error && r.data) || []; } catch (e) { rcs = []; }
+    rcs.sort(function(a, b){ return a.created_at < b.created_at ? 1 : -1; });
+    drawRc(); drawVm();
+  }
+
   /* 두 화면 */
   var pages = document.getElementById('pages');
   function mark(i){ document.querySelectorAll('.ptabs button').forEach(function(b){ b.classList.toggle('on', +b.dataset.p === i); });
-    if (i === 1 && vms.length) { setTimeout(function(){ vmMarkSeen(); var tb = document.querySelector('.ptabs [data-p="1"] .badge'); if (tb) tb.remove(); }, 1500); } }
+    if (i === 1 && (vms.length || rcUnseen())) { setTimeout(function(){ vmMarkSeen(); var tb = document.querySelector('.ptabs [data-p="1"] .badge'); if (tb) tb.remove(); }, 1500); } }
   function go(i){ pages.scrollTo({ left: i * pages.clientWidth, behavior: 'smooth' }); mark(i); }
   document.querySelector('.ptabs').onclick = function(e){ var b = e.target.closest('[data-p]'); if (b) go(+b.dataset.p); };
   pages.addEventListener('scroll', function(){ mark(Math.round(pages.scrollLeft / pages.clientWidth)); }, { passive: true });
@@ -380,7 +440,10 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
     PS.repaint();
   } catch (e) {}
   try { var r = await AL.sb.rpc('wafa_contacts'); contacts = (r && r.data) || []; } catch (e) { contacts = []; }
-  drawContacts(); draw(); loadVm();
+  drawContacts(); draw(); loadVm(); loadRc();
+  /* 다른 화면(통화)에서 돌아오면 새로 */
+  window.addEventListener('pageshow', function(ev){ if (ev.persisted) { loadRc(); loadVm(); } });
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) { loadRc(); loadVm(); } });
   var q0 = new URLSearchParams(location.search).get('n'); if (q0 && /^\d{10}$/.test(q0)) { digits = q0; draw(); }
 })();
 </script>
