@@ -307,14 +307,22 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
       var nm = v.name || (v.number ? fmt(v.number) : '?');
       return '<div class="ct vm' + (v.at > seen ? ' new' : '') + '"><span class="av">📮</span><div class="tx" data-o="' + i + '"><b>' + WF.esc(nm) + '</b>' +
         '<span>' + WF.esc(vmAgo(v.at)) + ' · ' + vmDur(v.ms) + '</span></div>' +
-        '<div class="act"><button data-o="' + i + '" aria-label="chat">💬</button><button class="p" data-p="' + i + '" aria-label="play">▶</button></div></div>'; }).join('');
+        '<div class="act"><button data-x="' + i + '" aria-label="remove">✕</button><button data-o="' + i + '" aria-label="chat">💬</button><button class="p" data-p="' + i + '" aria-label="play">▶</button></div></div>'; }).join('');
     var n = vms.filter(function(v){ return v.at > seen; }).length, tb = document.querySelector('.ptabs [data-p="1"]');
     n += rcUnseen();
     tb.innerHTML = WF.esc(d('tabRc')) + (n ? '<span class="badge">' + n + '</span>' : '');
   }
+  function vmHidden(){ try { return JSON.parse(localStorage.getItem('wafa_vm_hidden') || '[]'); } catch (e) { return []; } }
+  function vmHide(v){
+    try { var h = vmHidden(); h.push(v.id); localStorage.setItem('wafa_vm_hidden', JSON.stringify(h.slice(-500))); } catch (e) {}
+    try { var k = 'al_hidden_' + v.link_id, c = JSON.parse(localStorage.getItem(k) || '[]'); c.push(v.id); localStorage.setItem(k, JSON.stringify(c.slice(-3000))); } catch (e) {}
+    if (vmAudio) { try { vmAudio.pause(); } catch (e) {} vmAudio = null; }
+  }
   function vmMarkSeen(){ if (vms[0]) { try { localStorage.setItem(VMK, vms[0].at); } catch (e) {} } rcMarkSeen(); }
   document.getElementById('vmList').onclick = async function(e){
-    var o = e.target.closest('[data-o]'), pb = e.target.closest('[data-p]');
+    var o = e.target.closest('[data-o]'), pb = e.target.closest('[data-p]'), xb = e.target.closest('[data-x]');
+    /* ✕ 들은 음성사서함 지우기 — 이 폰 목록과 그 대화방 화면에서만(보낸 사람 쪽은 그대로) */
+    if (xb) { var v = vms[+xb.dataset.x]; vmHide(v); vms.splice(+xb.dataset.x, 1); drawVm(); return; }
     if (o) { location.href = 'alias_chat.html?link=' + encodeURIComponent(vms[+o.dataset.o].link_id); return; }
     if (!pb) return;
     if (vmAudio && vmAudio._b === pb) { vmAudio.pause(); vmAudio = null; pb.textContent = '▶'; return; }
@@ -328,6 +336,7 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
   };
   async function loadVm(){
     try { var r = await AL.sb.rpc('wafa_voicemails', { p_limit: 30 }); vms = (r && !r.error && r.data) || []; } catch (e) { vms = []; }
+    var hid = vmHidden(); vms = vms.filter(function(v){ return hid.indexOf(v.id) < 0; });
     drawVm();
   }
 
