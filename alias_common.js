@@ -3644,6 +3644,27 @@ AL.setRingMode = function(v){
   try { localStorage.setItem('wafa_ring', v); } catch (e) {}
   try { if (window.AliasNative && AliasNative.setRingMode) AliasNative.setRingMode(v); } catch (e) {}
 };
+/* 🔴 2026-11-21 와파 아이폰 1.1 — 화면 바탕색을 앱에 알려 위 · 아래 흰 띠를 같은 색으로(주간 · 야간 바꿀 때도) */
+(function(){
+  var last = '';
+  function push(){
+    try {
+      if (!(window.AliasNative && AliasNative.setBg) || !document.body) return;
+      var c = getComputedStyle(document.body).backgroundColor || '', m = c.match(/\d+(\.\d+)?/g);
+      if (!m || m.length < 3 || (m.length > 3 && +m[3] === 0)) return;
+      var r = +m[0], g = +m[1], b = +m[2], hex = '#' + [r, g, b].map(function(x){ return ('0' + Math.round(x).toString(16)).slice(-2); }).join('');
+      if (hex === last) return; last = hex;
+      AliasNative.setBg(hex, (0.299 * r + 0.587 * g + 0.114 * b) < 128);
+    } catch (e) {}
+  }
+  function start(){
+    push(); setTimeout(push, 600);
+    try { new MutationObserver(function(){ setTimeout(push, 50); }).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] }); } catch (e) {}
+    try { new MutationObserver(function(){ setTimeout(push, 50); }).observe(document.body, { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] }); } catch (e) {}
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
 /* 앱을 열 때마다 앱(안드로이드 · 아이폰)에도 알려 둠 — 앱이 꺼져 있을 때 오는 전화도 이 설정으로 */
 setTimeout(function(){ try { if (window.AliasNative && AliasNative.setRingMode) AliasNative.setRingMode(AL.ringMode()); } catch (e) {} }, 1500);
 

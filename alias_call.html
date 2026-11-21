@@ -8,9 +8,9 @@
 <link rel="stylesheet" href="alias_theme.css?v=20261021d">
 <script src="alias_config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="alias_common.js?v=20261121d"></script>
+<script src="alias_common.js?v=20261121e"></script>
 <script src="alias_media.js?v=20260927a"></script>
-<script src="alias_call.js?v=20261020g"></script>
+<script src="alias_call.js?v=20261121a"></script>
 <script>
 /* ⚠ alias_common.js 를 못 읽으면 화면이 텅 빕니다. 글씨를 채우는 것이
    그 파일이기 때문입니다. 빈 화면만 보면 원인을 알 수가 없어서,
@@ -215,6 +215,14 @@ const callType = P.get('type') || 'voice';
 const once     = P.get('once');       // 이 통화의 표. 한 번만 씁니다
 const incoming = !!callId;
 const answeredAlready = P.get('answered') === '1';   // 🔴 2026-10-05 — 이미 [받기] 를 누르고 옴
+/* 🔴 2026-11-21 와파 — 「보류하고 받기」로 통화 화면 안의 작은 창(iframe)에서 받은 두 번째 통화 */
+const INFRAME = P.get('inframe') === '1' && window.parent !== window;
+/* 🔴 2026-11-21 와파 3자 통화 초대 — 받으면 그 3자 통화 방으로(표 = w3 + 방 번호) */
+if (incoming && token && /^w3[0-9a-f]{32}$/.test(token)) {
+  var w3h = token.slice(2), w3room = w3h.slice(0, 8) + '-' + w3h.slice(8, 12) + '-' + w3h.slice(12, 16) + '-' + w3h.slice(16, 20) + '-' + w3h.slice(20);
+  location.replace('alias_gcall.html?link=' + w3room + '&type=' + encodeURIComponent(callType) + '&w3call=' + encodeURIComponent(callId));
+  throw new Error('wafa3 → 3자 통화 방으로');
+}
 
 /* 🔴 뒤로 가기로 이 화면에 다시 오면 전화를 또 걸면 안 됩니다.
    브라우저는 그냥 주소를 다시 열 뿐이라, 주소만 보고 "걸어라" 하면
@@ -323,6 +331,15 @@ function callTip(msg){
 let recDone = false;        // 이번 통화에서 녹음·녹화를 했는가
 
 function goChat(delayMs){
+  if (INFRAME) { setTimeout(function(){ try { parent.postMessage({ wafa: 'cw-end' }, '*'); } catch (e) {} }, delayMs || 0); return; }
+  /* 처음 통화가 끝났는데 두 번째 통화(작은 창)가 아직이면 — 두 번째 통화를 앞으로, 끝나면 그때 나감 */
+  if (cwFrame) {
+    cwFrame.outerDone = delayMs || 0;
+    try { cwFrame.frame.contentWindow.postMessage({ wafa: 'hold', on: false }, '*'); } catch (e) {}
+    cwFrame.wrap.style.visibility = 'visible'; cwMini(false);
+    var sw = document.getElementById('cwSwap'); if (sw) sw.remove();
+    return;
+  }
   var wait = delayMs || 0;
   var where = 'alias_chat.html?link=' + encodeURIComponent(linkId);
   /* 🔴 2026-10-30 — 누름 라인 화면에서 건 전화는 끝나면 그 라인 화면으로 돌아갑니다 */
@@ -519,8 +536,13 @@ function paintActs(){
        ① 누르자마자 글씨를 바꿔 **눌렸다는 것**을 보여줍니다
        ② 끊는 도중에 문제가 생겨도 삼켜서 멈추지 않게 합니다
        ③ 3초가 지나도 화면이 안 닫히면 **그냥 나갑니다** */
+  /* ⏸ 2026-11-21 와파 보류 */
+  if (AL.call.pc && t0 && !INFRAME) {
+    box.appendChild(btn('rbtn' + (holdOn ? ' on' : ' plain'), holdOn ? '▶' : '⏸', holdOn ? vmT('다시 통화', 'Resume') : vmT('보류', 'Hold'), function(){ setHold(!holdOn); }));
+  }
+
   /* 👥 2026-11-21 와파 3자 통화 — 통화 중 [＋] 로 와파 번호 한 사람 더 */
-  if (AL.call.pc && t0 && !twBusy) {
+  if (AL.call.pc && t0 && !twBusy && !INFRAME && !cwFrame) {
     box.appendChild(btn('rbtn plain', '➕', vmT('한 사람 더 (3자 통화)', 'Add a person (3-way)'), twAsk));
   }
 
@@ -570,6 +592,7 @@ function onState(state, extra){
   else if (state === 'failed')    { setStatus(AL.t('clFailed')); bye(); }
   else if (state === 'declined')  { setStatus(AL.t('clDeclined')); if (vmCan(state, extra)) vmOffer(state); else bye(); }
   else if (state === 'peer-hangup') { setStatus(AL.t('clEnded')); twThenBye(); }
+  else if (state === 'hold')      { peerHold(!!(extra && extra.on)); }
   else if (state === 'ended')     { if (vmCan(state, extra)) { setStatus(AL.t('clNoAnswer')); vmOffer(state); } else { setStatus(AL.t('clEnded')); bye(); } }
   else if (state === 'need-wifi') { setStatus(AL.t('dtNoWifi')); bye(); }
   else if (state === 'bytes') {
@@ -802,7 +825,7 @@ function twAsk(){
     var o = (r && !r.error && r.data) || { error: 'net' };
     if (!o.ok) { this.disabled = false; M.textContent = (E[o.error] || E.net)[en ? 1 : 0]; return; }
     bg.remove();
-    try { sessionStorage.setItem('wafa3_invite', JSON.stringify({ room: o.room, number: n, at: Date.now() })); } catch (e) {}
+    try { sessionStorage.setItem('wafa3_invite', JSON.stringify({ room: o.room, number: n, at: Date.now(), ring: o.ring || null })); } catch (e) {}
     twBusy = true;
     try { AL.endCall('completed'); } catch (e) {}
     twGo(o.room);
@@ -819,9 +842,10 @@ function twAsk(){
    ===================================================================== */
 var cwTimer = null, cwShown = null, cwSkip = {}, cwBeep = null;
 function cwWatch(){
-  if (cwTimer) return;
+  if (cwTimer || INFRAME) return;
   cwTimer = setInterval(async function(){
     if (leaving || twBusy) { cwStop(); return; }
+    if (cwFrame) return;          // 이미 두 통화 중
     var w = null;
     try { var r = await AL.sb.rpc('wafa_waiting_call', { p_except: (AL.call && AL.call.callId) || callId || null }); w = (r && !r.error && r.data) || null; } catch (e) {}
     if (w && w.id && !cwSkip[w.id]) { if (!cwShown || cwShown.id !== w.id) cwShow(w); }
@@ -852,6 +876,7 @@ function cwShow(w){
   bar.innerHTML = '<div style="font-weight:800;font-size:15.5px">⏳ ' + AL.esc(nm) + (en ? ' is calling' : ' 님 전화 대기 중') +
       (w.type === 'video' ? (en ? ' (video)' : ' (영상)') : '') + '</div>' +
     '<div style="display:flex;gap:6px">' +
+      '<button data-cw="hold" style="' + bs + 'background:#0F6E68">' + (en ? 'Hold & answer' : '보류하고 받기') + '</button>' +
       '<button data-cw="take" style="' + bs + 'background:#1E9E5A">' + (en ? 'End & answer' : '끊고 받기') + '</button>' +
       '<button data-cw="no" style="' + bs + 'background:#C0392B">' + (en ? 'Decline' : '거절') + '</button>' +
       '<button data-cw="msg" style="' + bs + 'background:#34495E">' + (en ? '💬 Busy' : '💬 통화 중') + '</button></div>';
@@ -860,6 +885,7 @@ function cwShow(w){
   bar.onclick = async function(e){
     var b = e.target.closest('[data-cw]'); if (!b) return;
     var k = b.dataset.cw; cwSkip[w.id] = 1; cwHide();
+    if (k === 'hold') { cwHoldAnswer(w); return; }
     if (k === 'take') {
       leaving = true; twBusy = true; cwStop();
       try { await AL.endCall('completed'); } catch (er) {}
@@ -874,6 +900,80 @@ function cwShow(w){
     try { await AL.declineCall(w.id); } catch (er) {}
   };
 }
+
+/* =====================================================================
+   ⏸ 와파 보류 (2026-11-21)
+     [⏸ 보류] — 내 마이크 · 카메라를 끄고 상대 소리도 끈 뒤, 상대 화면에 "보류 중" + 대기음.
+     통화 중 대기의 [⏸ 보류하고 받기] — 지금 통화를 보류하고, 새 전화를 이 화면 위의 작은 창에서 받음.
+       두 통화 사이를 [⇄ 바꾸기] 로 오가고, 새 전화가 끝나면 처음 통화로 저절로 돌아옵니다.
+   ===================================================================== */
+var holdOn = false, peerHoldOn = false, holdTone = null, cwFrame = null;
+function setHold(on){
+  holdOn = !!on;
+  try { AL.setHold(holdOn); } catch (e) {}
+  try { el('remoteA').muted = holdOn; } catch (e) {}
+  try { var rv = el('remoteV'); if (rv) rv.muted = true; } catch (e) {}
+  setStatus(holdOn ? vmT('⏸ 보류 중 — 상대는 기다리는 중입니다', '⏸ On hold') : AL.t('clConnected'));
+  paintActs();
+}
+function peerHold(on){
+  peerHoldOn = on;
+  if (holdTone) { clearInterval(holdTone); holdTone = null; }
+  if (on) {
+    setStatus(vmT('⏸ 상대가 통화를 잠시 보류했어요. 기다려 주세요', '⏸ You are on hold. Please wait'));
+    var bt = function(){ vmTones([[523, 0, .25], [659, .3, .25], [784, .6, .35]]); };
+    bt(); holdTone = setInterval(bt, 4000);
+  } else {
+    setStatus(AL.t('clConnected'));
+  }
+}
+function cwHoldAnswer(w){
+  setHold(true);
+  var f = document.createElement('div'); f.id = 'cwWrap';
+  f.style.cssText = 'position:fixed;inset:0;z-index:9996;background:#0E1621;display:flex;flex-direction:column';
+  var bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;gap:8px;align-items:center;padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;background:#16202C;color:#fff;font-weight:800;font-size:14px';
+  bar.innerHTML = '<span style="flex:1">⏸ ' + AL.esc((view && (view.peer_label || view.peer_display)) || '') + vmT(' 보류 중', ' on hold') + '</span>' +
+    '<button id="cwSwap" style="border:0;border-radius:10px;padding:9px 12px;background:#0F6E68;color:#fff;font:inherit;font-weight:800">' + vmT('⇄ 바꾸기', '⇄ Swap') + '</button>';
+  var fr = document.createElement('iframe');
+  fr.setAttribute('allow', 'microphone; camera; autoplay');
+  fr.style.cssText = 'flex:1;border:0;width:100%';
+  fr.src = 'alias_call.html?call=' + encodeURIComponent(w.id) + '&token=' + encodeURIComponent(w.token || '') +
+           '&link=' + encodeURIComponent(w.link_id) + '&type=' + encodeURIComponent(w.type || 'voice') + '&once=' + encodeURIComponent(w.id) + '&answered=1&inframe=1';
+  f.appendChild(bar); f.appendChild(fr); document.body.appendChild(f);
+  cwFrame = { wrap: f, frame: fr, front: true };
+  document.getElementById('cwSwap').onclick = function(){
+    /* 앞에 있는 통화를 보류하고 뒤의 통화로 */
+    cwFrame.front = !cwFrame.front;
+    try { fr.contentWindow.postMessage({ wafa: 'hold', on: !cwFrame.front }, '*'); } catch (e) {}
+    setHold(cwFrame.front);
+    f.style.visibility = cwFrame.front ? 'visible' : 'hidden';
+    cwMini(!cwFrame.front);
+  };
+}
+function cwMini(show){
+  var m = document.getElementById('cwMini');
+  if (!show) { if (m) m.remove(); return; }
+  if (m) return;
+  m = document.createElement('button'); m.id = 'cwMini';
+  m.style.cssText = 'position:fixed;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top,0px));z-index:9997;border:0;border-radius:14px;padding:12px;background:#16202C;color:#fff;font:inherit;font-weight:800';
+  m.textContent = vmT('⏸ 다른 통화 보류 중 · ⇄ 바꾸기', '⏸ Other call on hold · ⇄ Swap');
+  m.onclick = function(){ document.getElementById('cwSwap').click(); };
+  document.body.appendChild(m);
+}
+window.addEventListener('message', function(e){
+  var d = e.data || {};
+  if (d.wafa === 'cw-end' && cwFrame) {          // 두 번째 통화가 끝남 → 처음 통화로
+    var done = cwFrame.outerDone;
+    try { cwFrame.wrap.remove(); } catch (er) {} cwFrame = null; cwMini(false);
+    if (done !== undefined) { goChat(0); return; }   // 처음 통화도 이미 끝났으면 나감
+    setHold(false);
+  }
+  if (d.wafa === 'hold' && INFRAME) {             // (작은 창) 바깥에서 보류 / 풀기
+    try { AL.setHold(!!d.on); el('remoteA').muted = !!d.on; } catch (er) {}
+    setStatus(d.on ? vmT('⏸ 보류 중', '⏸ On hold') : AL.t('clConnected'));
+  }
+});
 
 var VM_MAX = 60000, vmRec = null, vmShown = false, vmNo = false, vmOff = false;
 
@@ -1225,6 +1325,7 @@ function rcShow(on){
    ===================================================================== */
 let ongoingOn = false;
 function ongoingStart(){
+  if (INFRAME) return;      // 두 번째 통화(작은 창) — 앱의 통화 중 알림은 첫 통화가 맡음
   if (ongoingOn) return;
   try {
     if (window.AliasNative && typeof AliasNative.callOngoing === 'function') {
@@ -1249,6 +1350,7 @@ function wafaReportUsage(){
 window.addEventListener('pagehide', wafaReportUsage);
 function ongoingStop(){
   wafaReportUsage();
+  if (INFRAME) return;
   ongoingOn = false;
   try {
     if (window.AliasNative && typeof AliasNative.callEnded === 'function') {
