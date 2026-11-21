@@ -895,6 +895,15 @@ function vmSay(text){
   return new Promise(function(done){
     var fin = false, ok = function(){ if (!fin) { fin = true; done(); } };
     try {
+      /* 안드로이드 앱(1.1 이상) — 기본 음성(TTS)으로. 다 읽으면 앱이 __wafaSpoke 를 부름 */
+      var N = window.AliasNative;
+      if (N && N.speak && N.ttsReady && N.ttsReady()) {
+        var id = 'vm' + Date.now();
+        window.__wafaSpoke = function(x){ if (x === id) ok(); };
+        N.speak(text, AL.lang === 'en' ? 'en' : 'ko', id);
+        setTimeout(ok, 12000);
+        return;
+      }
       var ss = window.speechSynthesis; if (!ss || !window.SpeechSynthesisUtterance) return ok();
       var u = new SpeechSynthesisUtterance(text), lang = AL.lang === 'en' ? 'en' : 'ko';
       u.lang = lang === 'en' ? 'en-US' : 'ko-KR'; u.rate = 1.0;
@@ -906,7 +915,7 @@ function vmSay(text){
     } catch (e) { ok(); }
   });
 }
-function vmQuiet(){ try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {} }
+function vmQuiet(){ try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {} try { window.AliasNative && AliasNative.stopSpeak && AliasNative.stopSpeak(); } catch (e) {} }
 function vmBuzz(p){ try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
 async function vmAuto(){
   await new Promise(function(r){ setTimeout(r, 400); });
