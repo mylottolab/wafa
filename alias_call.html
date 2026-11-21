@@ -875,7 +875,52 @@ function cwShow(w){
   };
 }
 
-var VM_MAX = 60000, vmRec = null, vmShown = false, vmNo = false;
+var VM_MAX = 60000, vmRec = null, vmShown = false, vmNo = false, vmOff = false;
+
+/* 🔊 2026-11-21 귀에 대고 있어도 알 수 있게 — 화면을 안 봐도 되는 음성사서함
+     안 받으면: 띠리링 + 음성 안내("…삐 소리가 나면…") → 삐 + 진동 → 저절로 녹음
+     말을 하다 3초 조용하면 저절로 보냄(띵동 + "보냈습니다"). 10초 동안 아무 말이 없으면 보내지 않고 끝냄.
+     ⚠ 음성 안내(말소리)는 폰이 읽어 주는 기능(speechSynthesis)이 있을 때만 — 없으면 소리 신호와 진동만 */
+var vmAC = null;
+function vmCtx(){ try { var C = window.AudioContext || window.webkitAudioContext; vmAC = vmAC || new C(); if (vmAC.state === 'suspended') vmAC.resume(); return vmAC; } catch (e) { return null; } }
+function vmTones(list){   /* [[주파수, 시작초, 길이초], …] */
+  var ac = vmCtx(); if (!ac) return 0; var t = ac.currentTime + 0.05, end = 0;
+  list.forEach(function(x){ var o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = x[0];
+    g.gain.setValueAtTime(0.0001, t + x[1]); g.gain.exponentialRampToValueAtTime(0.25, t + x[1] + 0.02);
+    g.gain.setValueAtTime(0.25, t + x[1] + x[2] - 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + x[1] + x[2]);
+    o.connect(g); g.connect(ac.destination); o.start(t + x[1]); o.stop(t + x[1] + x[2] + 0.02); end = Math.max(end, x[1] + x[2]); });
+  return end * 1000 + 100;
+}
+function vmSay(text){
+  return new Promise(function(done){
+    var fin = false, ok = function(){ if (!fin) { fin = true; done(); } };
+    try {
+      var ss = window.speechSynthesis; if (!ss || !window.SpeechSynthesisUtterance) return ok();
+      var u = new SpeechSynthesisUtterance(text), lang = AL.lang === 'en' ? 'en' : 'ko';
+      u.lang = lang === 'en' ? 'en-US' : 'ko-KR'; u.rate = 1.0;
+      var vs = ss.getVoices() || [], v = vs.filter(function(x){ return (x.lang || '').toLowerCase().indexOf(lang) === 0; })[0];
+      if (v) u.voice = v; else if (vs.length) return ok();      // 그 말 목소리가 없으면 읽지 않음
+      u.onend = ok; u.onerror = ok;
+      ss.cancel(); ss.speak(u);
+      setTimeout(ok, 9000);                                       // 끝 소식이 안 와도 9초 뒤 계속
+    } catch (e) { ok(); }
+  });
+}
+function vmQuiet(){ try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {} }
+function vmBuzz(p){ try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+async function vmAuto(){
+  await new Promise(function(r){ setTimeout(r, 400); });
+  if (vmOff || vmRec) return;
+  await new Promise(function(r){ setTimeout(r, vmTones([[660, 0, .16], [880, .18, .16], [1100, .36, .22]])); });
+  if (vmOff || vmRec) return;
+  await vmSay(vmT('상대방이 전화를 받지 않습니다. 삐 소리가 나면 메시지를 남겨 주세요. 말씀을 마치면 저절로 보내집니다.',
+                  'No answer. Please leave a message after the tone. It will be sent when you stop talking.'));
+  if (vmOff || vmRec) return;
+  vmBuzz([180, 90, 180]);
+  await new Promise(function(r){ setTimeout(r, vmTones([[1000, 0, .45]])); });
+  if (vmOff || vmRec) return;
+  vmStart(true);
+}
 function vmT(ko, en){ return AL.lang === 'en' ? en : ko; }
 function vmCan(state, extra){
   if (incoming || t0 || vmShown || !linkId || !view || !view.my_side_id) return false;
@@ -917,13 +962,15 @@ async function vmOffer(state){
   }
   el('bytes').textContent = vmT('음성 메시지를 남길 수 있어요 (최대 1분)', 'You can leave a voice message (up to 1 min)');
   var a = el('acts'); a.innerHTML = '';
-  a.appendChild(vmBtn(vmT('🎙 음성 메시지 남기기', '🎙 Leave a message'), '#0F6E68', vmStart));
-  a.appendChild(vmBtn(vmT('닫기', 'Close'), 'rgba(128,128,128,.4)', function(){ goChat(0); }));
+  a.appendChild(vmBtn(vmT('🎙 음성 메시지 남기기', '🎙 Leave a message'), '#0F6E68', function(){ vmQuiet(); vmStart(); }));
+  a.appendChild(vmBtn(vmT('닫기', 'Close'), 'rgba(128,128,128,.4)', function(){ vmQuiet(); vmOff = true; goChat(0); }));
+  vmAuto();
   /* 아무것도 안 누르면 30초 뒤 대화방으로 */
   setTimeout(function(){ if (!vmRec && vmShown !== 'sent') goChat(0); }, 30000);
 }
-async function vmStart(){
+async function vmStart(auto){
   var a = el('acts');
+  if (vmRec) return;
   try {
     var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     var types = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'];
@@ -933,14 +980,24 @@ async function vmStart(){
     rec.ondataavailable = function(e){ if (e.data && e.data.size) chunks.push(e.data); };
     rec.start(1000);
     vmRec = { rec: rec, stream: stream, chunks: chunks, st: st, mime: mime || rec.mimeType || 'audio/webm' };
+    /* 말이 끝났나 — 소리 크기를 보다가, 말한 뒤 3초 조용하면 보냄 · 처음 10초 동안 아무 말 없으면 그만 */
+    var heard = false, quietSince = Date.now(), an = null, buf = null;
+    try { var ac = vmCtx(); if (ac) { an = ac.createAnalyser(); an.fftSize = 1024; ac.createMediaStreamSource(stream).connect(an); buf = new Uint8Array(an.fftSize); } } catch (e) { an = null; }
     vmRec.tick = setInterval(function(){
       var ms = Date.now() - st;
+      if (an) {
+        an.getByteTimeDomainData(buf); var sum = 0; for (var i = 0; i < buf.length; i++) { var v = (buf[i] - 128) / 128; sum += v * v; }
+        var loud = Math.sqrt(sum / buf.length) > 0.04;
+        if (loud) { heard = true; quietSince = Date.now(); }
+        if (heard && Date.now() - quietSince > 3000) { vmStop(true); return; }
+        if (!heard && ms > 10000) { vmStop(false, true); return; }
+      }
       el('bytes').textContent = '🔴 ' + vmT('녹음 중', 'Recording') + ' ' + Math.floor(ms / 60000) + ':' + String(Math.floor(ms / 1000) % 60).padStart(2, '0') + ' / 1:00';
       if (ms >= VM_MAX) vmStop(true);
     }, 250);
     setStatus(vmT('지금 말씀하세요', 'Speak now'));
     a.innerHTML = '';
-    a.appendChild(vmBtn(vmT('■ 보내기', '■ Send'), '#1E9E5A', function(){ vmStop(true); }));
+    a.appendChild(vmBtn(vmT('■ 보내기', '■ Send'), '#1E9E5A', function(){ vmQuiet(); vmStop(true); }));
     a.appendChild(vmBtn(vmT('취소', 'Cancel'), 'rgba(128,128,128,.4)', function(){ vmStop(false); }));
   } catch (e) {
     console.warn('[vm] 마이크 실패', e);
@@ -949,13 +1006,15 @@ async function vmStart(){
     a.appendChild(vmBtn(vmT('💬 대화방으로', '💬 Open chat'), '#0F6E68', function(){ goChat(0); }));
   }
 }
-function vmStop(send){
+function vmStop(send, silent){
   var r = vmRec; if (!r || r.stopping) return; r.stopping = true;
   clearInterval(r.tick);
   var ms = Math.min(Date.now() - r.st, VM_MAX);
   r.rec.onstop = async function(){
     r.stream.getTracks().forEach(function(t){ t.stop(); });
-    if (!send || ms < 800 || !r.chunks.length) { goChat(0); return; }
+    if (!send || ms < 800 || !r.chunks.length) {
+      if (silent) { vmTones([[500, 0, .25], [400, .3, .3]]); await vmSay(vmT('메시지가 없어 끝냅니다.', 'No message. Goodbye.')); }
+      goChat(0); return; }
     var a = el('acts'); a.innerHTML = '';
     el('bytes').textContent = vmT('보내는 중…', 'Sending…');
     try {
@@ -968,7 +1027,10 @@ function vmStop(send){
       vmShown = 'sent';
       setStatus(vmT('음성 메시지를 남겼어요', 'Message left'));
       el('bytes').textContent = '';
-      goChat(1400);
+      vmBuzz(120);
+      await new Promise(function(rr){ setTimeout(rr, vmTones([[880, 0, .18], [660, .22, .3]])); });
+      await vmSay(vmT('메시지를 보냈습니다.', 'Your message was sent.'));
+      goChat(600);
     } catch (e) {
       console.error('[vm] 보내기 실패', e);
       el('bytes').textContent = vmT('보내지 못했어요. 대화방에서 다시 남겨 주세요.', 'Could not send. Please try again in the chat.');
