@@ -1485,10 +1485,51 @@ AL.setLang = async function(pref){
 AL.t = function(key, vars){
   var row = AL.STR[key];
   if (!row || !row[AL.lang]) return '[[' + key + ']]';
-  var s = row[AL.lang];
+  var s = AL.wafaBrand(row[AL.lang]);
   if (vars) for (var k in vars) s = s.split('{' + k + '}').join(vars[k]);
   return s;
 };
+
+/* 🔴 2026-11-21 와파 — 부름에서 가져온 화면 글자 속 「부름」을 「와파」로(조사도 맞춤).
+     부름번호는 와파 번호와 헷갈리지 않게 「별칭 번호」로. 영어 Burum → WAFA.
+     ⚠ 사람이 쓴 대화 내용은 건드리지 않습니다(화면 글자 · 처음 그려진 글자만). */
+AL.wafaBrand = function(s){
+  if (typeof s !== 'string' || (s.indexOf('부름') < 0 && s.indexOf('Burum') < 0)) return s;
+  var J = { '은': '는', '는': '는', '을': '를', '를': '를', '이': '가', '가': '가', '과': '와', '와': '와', '으로': '로', '로': '로' };
+  return s.replace(/부름번호/g, '별칭 번호')
+          .replace(/부름(으로|은|을|과)/g, function(m, p){ return '와파' + J[p]; })
+          .replace(/부름이(?![가-힣])/g, '와파가').replace(/부름이에요/g, '와파예요').replace(/부름이었/g, '와파였').replace(/부름이라/g, '와파라')
+          .replace(/부름/g, '와파')
+          .replace(/Burum numbers/g, 'alias numbers').replace(/Burum number/g, 'alias number')
+          .replace(/BURUM/g, 'WAFA').replace(/Burum/g, 'WAFA');
+};
+(function(){
+  /* 부름에서 가져온 화면(alias_ · sos · support)에 처음 그려진 글자 · 제목 · 안내 칸 */
+  if (!/\/(alias_[a-z_]+|sos|support[a-z_]*)\.html/.test(location.pathname)) return;
+  function walk(root){
+    try {
+      var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: function(n){
+        var p = n.parentNode && n.parentNode.nodeName;
+        if (p === 'SCRIPT' || p === 'STYLE' || p === 'TEXTAREA') return NodeFilter.FILTER_REJECT;
+        return /부름|Burum/.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP; } });
+      var list = []; while (w.nextNode()) list.push(w.currentNode);
+      list.forEach(function(n){ n.nodeValue = AL.wafaBrand(n.nodeValue); });
+      root.querySelectorAll && root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(function(e){
+        ['placeholder', 'title', 'aria-label'].forEach(function(a){ var v = e.getAttribute(a); if (v && /부름|Burum/.test(v)) e.setAttribute(a, AL.wafaBrand(v)); });
+      });
+      if (/부름|Burum/.test(document.title)) document.title = AL.wafaBrand(document.title);
+    } catch (e) {}
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ walk(document.body); });
+  else walk(document.body);
+  /* 처음 2초 동안 화면이 그리는 글자(안내 · 빈 목록 등)도 — 대화 말풍선은 제외 */
+  try {
+    var mo = new MutationObserver(function(ms){ ms.forEach(function(m){ m.addedNodes.forEach(function(n){
+      if (n.nodeType === 1 && !(n.closest && n.closest('.bubble,.msg,.msgs,#msgs,.chat-body,[data-mid]'))) walk(n); }); }); });
+    var go = function(){ mo.observe(document.body, { childList: true, subtree: true }); setTimeout(function(){ mo.disconnect(); }, 2500); };
+    if (document.body) go(); else document.addEventListener('DOMContentLoaded', go);
+  } catch (e) {}
+})();
 
 AL.paintText = function(root){
   var scope = root || document;
@@ -3596,12 +3637,23 @@ AL.ringTone = function(){
    ② 2026-09-12 — quiet 는 이제 거의 안 씁니다.
       통화화면이 열릴 때 안드로이드 알림을 바로 지우므로 소리가 겹치지
       않습니다. 그래서 화면이 마음껏 울려도 됩니다(함정 59 해소). */
+/* 🔴 2026-11-21 와파 「전화 올 때」 — ring(벨+진동) · vibrate(진동만) · silent(무음). 통화 설정에서 고름 */
+AL.ringMode = function(){ try { var v = localStorage.getItem('wafa_ring'); return (v === 'vibrate' || v === 'silent') ? v : 'ring'; } catch (e) { return 'ring'; } };
+AL.setRingMode = function(v){
+  v = (v === 'vibrate' || v === 'silent') ? v : 'ring';
+  try { localStorage.setItem('wafa_ring', v); } catch (e) {}
+  try { if (window.AliasNative && AliasNative.setRingMode) AliasNative.setRingMode(v); } catch (e) {}
+};
+/* 앱을 열 때마다 앱(안드로이드 · 아이폰)에도 알려 둠 — 앱이 꺼져 있을 때 오는 전화도 이 설정으로 */
+setTimeout(function(){ try { if (window.AliasNative && AliasNative.setRingMode) AliasNative.setRingMode(AL.ringMode()); } catch (e) {} }, 1500);
+
 AL.startRinging = function(opts){
   AL.stopRinging();
-  var quiet = !!(opts && opts.quiet);
+  var quiet = !!(opts && opts.quiet), rm = AL.ringMode();
+  if (rm === 'silent') return;                 // 무음 — 화면만
 
   var beat = function(){
-    if (!quiet) AL.ringTone();
+    if (!quiet && rm === 'ring') AL.ringTone();
     try { if (navigator.vibrate) navigator.vibrate([500, 220, 500]); } catch (e) {}
   };
 

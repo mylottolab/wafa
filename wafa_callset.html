@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="wafa.css?v=20261120c">
 <script src="alias_config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="alias_common.js?v=20261121c"></script>
+<script src="alias_common.js?v=20261121d"></script>
 <script src="wafa.js?v=20261121c"></script>
 <style>
 .opt{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1.5px solid var(--line);border-radius:14px;cursor:pointer}
@@ -23,6 +23,14 @@
      착신전환: 내 와파 번호로 온 전화를 다른 와파 번호로 넘김. 서버 wafa_set_forward · wafa_get_forward (sql/06) -->
 <div class="wf">
   <div class="wf-top"></div>
+  <!-- 🔔 2026-11-21 전화 올 때: 벨 · 진동 · 무음 (폰 안에 저장 · 앱에도 알림) -->
+  <div class="card">
+    <h2 id="rT"></h2>
+    <label class="opt" data-r="ring"><input type="radio" name="r" value="ring"><div><b id="rRing"></b><span id="rRingD"></span></div></label>
+    <label class="opt" data-r="vibrate"><input type="radio" name="r" value="vibrate"><div><b id="rVib"></b><span id="rVibD"></span></div></label>
+    <label class="opt" data-r="silent"><input type="radio" name="r" value="silent"><div><b id="rSil"></b><span id="rSilD"></span></div></label>
+    <p class="muted" id="rNote"></p>
+  </div>
   <div class="card">
     <h2 id="fT"></h2>
     <p class="muted" id="fD"></p>
@@ -44,6 +52,13 @@
   var EN = !!WF.en;
   var T = {
     title: ['통화 설정', 'Call settings'],
+    rT: ['🔔 전화 올 때', '🔔 When a call comes in'],
+    rRing: ['벨소리 + 진동', 'Ring and vibrate'], rRingD: ['폰의 벨소리로 울립니다', 'Rings with your phone ringtone'],
+    rVib: ['진동만', 'Vibrate only'], rVibD: ['소리 없이 진동으로 알립니다', 'Vibrates without sound'],
+    rSil: ['무음', 'Silent'], rSilD: ['소리 · 진동 없이 화면만 뜹니다', 'Shows the call screen only'],
+    rNote: ['이 폰에만 저장됩니다. 아이폰은 진동 여부가 아이폰 설정(사운드 및 햅틱)을 따릅니다. 앱이 꺼져 있을 때의 진동 · 무음은 와파 앱 1.1부터 됩니다.',
+            'Saved on this phone only. On iPhone, vibration follows Settings > Sounds & Haptics. Vibrate/silent while the app is closed needs WAFA 1.1.'],
+    rSaved: ['바꿨어요', 'Updated'],
     fT: ['📲 착신전환', '📲 Call forwarding'],
     fD: ['내 와파 번호로 온 전화를 다른 와파 번호로 넘깁니다. 문자는 넘기지 않고 나에게 그대로 옵니다.', 'Send calls to your WAFA number on to another WAFA number. Texts still come to you.'],
     mOff: ['끄기', 'Off'], mOffD: ['전화는 나에게만 옵니다', 'Calls ring only you'],
@@ -56,35 +71,43 @@
     e_no_number: ['내 와파 번호가 있어야 착신전환을 쓸 수 있어요', 'You need a WAFA number to use forwarding'],
     e_need: ['번호 10자리를 넣어 주세요', 'Enter all 10 digits'], e_net: ['저장하지 못했어요. 다시 눌러 주세요.', 'Could not save. Please try again.'],
     vT: ['📮 음성사서함', '📮 Voicemail'],
-    vD: ['내가 건 전화를 상대가 안 받으면 음성 메시지(최대 1분)를 남길 수 있고, 나에게 남긴 메시지는 [번호판 → 연락처] 맨 위 📮에서 바로 들을 수 있어요. 따로 켤 필요 없이 늘 켜져 있습니다.',
-         'If someone doesn’t answer your call you can leave a voice message (up to 1 min). Messages left for you are at the top of Keypad → Contacts (📮). Always on.']
+    vD: ['내가 건 전화를 상대가 안 받으면 음성 메시지(최대 1분)를 남길 수 있고, 나에게 남긴 메시지는 번호판 화면의 [🕘 최근] 맨 위 📮에서 바로 들을 수 있어요. 따로 켤 필요 없이 늘 켜져 있습니다.',
+         'If someone doesn’t answer your call you can leave a voice message (up to 1 min). Messages left for you are at the top of the Recents tab (📮). Always on.']
   };
   function t(k, v){ var s = T[k][EN ? 1 : 0]; if (v) for (var x in v) s = s.replace('{' + x + '}', v[x]); return s; }
-  ['fT','fD','mOff','mOffD','mNo','mNoD','mAl','mAlD','save','vT','vD'].forEach(function(k){ document.getElementById(k).textContent = t(k); });
+  ['rT','rRing','rRingD','rVib','rVibD','rSil','rSilD','rNote','fT','fD','mOff','mOffD','mNo','mNoD','mAl','mAlD','save','vT','vD'].forEach(function(k){ document.getElementById(k).textContent = t(k); });
   document.getElementById('num').placeholder = t('ph');
   document.title = t('title');
   WF.header(t('title'), 'wafa_start.html');
   WF.paint();
+  /* 🔔 벨 · 진동 · 무음 — 고르는 즉시 저장 */
+  function pickR(m){ document.querySelectorAll('.opt[data-r]').forEach(function(o){ var on = o.dataset.r === m; o.classList.toggle('on', on); o.querySelector('input').checked = on; }); }
+  pickR(AL.ringMode());
+  document.querySelectorAll('.opt[data-r] input').forEach(function(i){ i.onchange = function(){
+    AL.setRingMode(i.value); pickR(i.value); WF.toast(t('rSaved'));
+    try { if (navigator.vibrate && i.value !== 'silent') navigator.vibrate(i.value === 'vibrate' ? 300 : [0]); } catch (e) {}
+  }; });
+
   var sess = await AL.requireLogin(); if (!sess) return;
 
   var fmt = function(n){ n = String(n || ''); return n.length === 10 ? n.slice(0, 4) + '-' + n.slice(4, 7) + '-' + n.slice(7) : n; };
   var cur = { mode: 'off', number: null };
   function pick(m){
-    document.querySelectorAll('.opt').forEach(function(o){ var on = o.dataset.m === m; o.classList.toggle('on', on); o.querySelector('input').checked = on; });
+    document.querySelectorAll('.opt[data-m]').forEach(function(o){ var on = o.dataset.m === m; o.classList.toggle('on', on); o.querySelector('input').checked = on; });
     document.getElementById('numRow').hidden = m === 'off';
   }
   function showNow(){
     document.getElementById('now').textContent = cur.mode === 'off' ? t('nowOff') :
       t('nowOn', { m: t(cur.mode === 'always' ? 'mAl' : 'mNo'), n: fmt(cur.number) });
   }
-  document.querySelectorAll('.opt input').forEach(function(i){ i.onchange = function(){ pick(i.value); }; });
+  document.querySelectorAll('.opt[data-m] input').forEach(function(i){ i.onchange = function(){ pick(i.value); }; });
   document.getElementById('num').oninput = function(){ var v = this.value.replace(/\D/g, '').slice(0, 10); this.value = fmt(v); };
 
   try { cur = await WF.rpc('wafa_get_forward') || cur; } catch (e) {}
   pick(cur.mode || 'off'); if (cur.number) document.getElementById('num').value = fmt(cur.number); showNow();
 
   document.getElementById('save').onclick = async function(){
-    var m = (document.querySelector('.opt input:checked') || {}).value || 'off', n = document.getElementById('num').value.replace(/\D/g, '');
+    var m = (document.querySelector('.opt[data-m] input:checked') || {}).value || 'off', n = document.getElementById('num').value.replace(/\D/g, '');
     var M = document.getElementById('msg'); M.className = 'msg';
     if (m !== 'off' && n.length !== 10) { M.className = 'msg bad'; M.textContent = t('e_need'); return; }
     this.disabled = true;

@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="wafa.css?v=20261120c">
 <script src="alias_config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="alias_common.js?v=20261121c"></script>
+<script src="alias_common.js?v=20261121d"></script>
 <script src="wafa.js?v=20261121c"></script>
 </head>
 <body>
@@ -65,7 +65,7 @@
     '<a class="tile" href="wafa_dial.html"><span class="ic">☎️</span><b>' + WF.t('dialN').replace('☎️ ', '') + '</b><span>' + WF.t('dialD') + '</span></a>' +
     '<a class="tile" href="wafa_plan.html"><span class="ic">💳</span><b>' + WF.t('planN').replace('💳 ', '') + '</b><span>' + WF.t('planD') + '</span></a>' +
     '<a class="tile" href="wafa_usage.html"><span class="ic">📊</span><b>' + WF.t('usageN').replace('📊 ', '') + '</b><span>' + WF.t('usageD') + '</span></a>' +
-    '<a class="tile" href="wafa_callset.html"><span class="ic">📲</span><b>' + (WF.en ? 'Call settings' : '통화 설정') + '</b><span>' + (WF.en ? 'Forwarding · Voicemail' : '착신전환 · 음성사서함') + '</span></a>' +
+    '<a class="tile" href="wafa_callset.html"><span class="ic">📲</span><b>' + (WF.en ? 'Call settings' : '통화 설정') + '</b><span>' + (WF.en ? 'Ring · Forwarding · Voicemail' : '벨 · 착신전환 · 음성사서함') + '</span></a>' +
     '<button class="tile" id="sw"><span class="ic">🔁</span><b>' + WF.t('switchMain') + '</b><span>' + (main === 'open' ? WF.t('privN') : WF.t('openN')) + '</span></button>';
 
   V.innerHTML = numCard + '<div class="tiles" style="margin-top:14px">' + tiles + '</div>';
