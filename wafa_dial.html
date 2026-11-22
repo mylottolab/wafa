@@ -262,10 +262,10 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
   function sdPaint(){
     var S = sdGet();
     K.querySelectorAll('[data-n]').forEach(function(b){ var k = b.dataset.n, sm = b.querySelector('small'); if (!sm || !/[1-9]/.test(k)) return;
-      var w = sdName(S[k]); sm.textContent = w || (LET[k] || ''); sm.className = w ? 'sd' : ''; });
+      var w = sdName(S[k]); sm.textContent = w ? '🔢 ' + w : (LET[k] || ''); sm.className = w ? 'sd' : ''; });   /* 🔢 번호로 넣은 칸 표시(모든 앱 같게) */
     var box = document.getElementById('sdBox'); if (!box) return;
     box.innerHTML = ['1','2','3','4','5','6','7','8','9'].map(function(k){ var w = sdName(S[k]);
-      return '<button type="button" data-s="' + k + '" class="' + (w ? 'on' : '') + '"><b>' + k + '</b><span>' + WF.esc(w || d('sdEmpty')) + '</span></button>'; }).join('');
+      return '<button type="button" data-s="' + k + '" class="' + (w ? 'on' : '') + '"><b>' + k + '</b><span>' + WF.esc(w ? '🔢 ' + w : d('sdEmpty')) + '</span></button>'; }).join('');
   }
   function sdOpen(n){
     var S = sdGet(), cur = S[n];
