@@ -10,77 +10,36 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="alias_common.js?v=20261122a"></script>
 <script src="wafa.js?v=20261121c"></script>
+<script src="dialhome.js?v=20261122b"></script>
 <style>
-/* ☎ 와파 다이얼 첫 화면 (2026-11-22 시험)
-   · 숫자 구멍을 톡 → 가운데에 그 번호의 안내 · 한 번 더 톡(또는 [열기]) → 실행
-   · 구멍에 손가락을 넣고 오른쪽 아래 멈춤쇠까지 돌렸다 놓으면 → 드르륵 · 딸깍딸깍 되돌아간 뒤 바로 실행
-   · 아래 번호 목록을 눌러도 같습니다(돌리기 어려운 분 · 화면 읽기 프로그램) */
-:root{ --base:#F4F1E6; --base-line:#DCD5C3; --plate:#0F6E68; --plate-rim:#0B524D; --hole-ring:#0A4743; --stop:#B9BEC4; --num:#1B2430; --lab:#5E6773; --hot:#E0A42E; --hot-ink:#1B2430; --center:#FAF8F2 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --base:#1E252C; --base-line:#323C46; --plate:#1C8A82; --plate-rim:#13645E; --hole-ring:#0E4B47; --stop:#7C8590; --num:#ECEFF2; --lab:#A3ACB6; --hot:#F0B848; --hot-ink:#12171C; --center:#161C22 } }
-:root[data-theme="dark"]{ --base:#1E252C; --base-line:#323C46; --plate:#1C8A82; --plate-rim:#13645E; --hole-ring:#0E4B47; --stop:#7C8590; --num:#ECEFF2; --lab:#A3ACB6; --hot:#F0B848; --hot-ink:#12171C; --center:#161C22 }
+/* ☎ 와파 다이얼 첫 화면 (2026-11-22 채택) — 다이얼 모양 · 돌리기는 dialhome.js(와파 · 부름 · 누름 · 바로너 공용)
+   예전 첫 화면(wafa_dial.html: 번호판 · 최근 · 연락처)이 하던 일을 여기서도:
+     인터넷 연결 표시 · 내 번호(가운데) · 번호 없으면 받기 안내 · 새 음성사서함 · 부재중 배지(2번) · 112 · 119 안내 · 로그아웃(⚙ 전체 메뉴) */
 .wf{gap:10px}
-.dialwrap{position:relative;width:100%;max-width:440px;margin:0 auto;aspect-ratio:1/1;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-.dialwrap svg{width:100%;height:100%;display:block;overflow:visible}
-.dialwrap .num{font:800 23px/1 "Pretendard","Apple SD Gothic Neo",system-ui,sans-serif;fill:var(--num)}
-.dialwrap .ico{font-size:15px}
-.dialwrap .hole{cursor:pointer}
-#plate{transform-origin:180px 180px;will-change:transform}
-.ctext{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:31%;text-align:center;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:3px}
-.ctext b{font-size:clamp(14px,4.2vw,19px);line-height:1.25}
-.ctext span{font-size:clamp(11px,3vw,13px);color:var(--lab);line-height:1.35}
-.ctext .k{font:900 clamp(26px,8vw,36px)/1 "Pretendard",system-ui,sans-serif;color:var(--brand)}
-.hint{text-align:center;font-size:14px;color:var(--sub);margin:0;min-height:22px}
-.go{display:flex;gap:8px}
-.go .btn{flex:1}
-.menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-[hidden]{display:none!important}
-.menu button{min-width:0;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;min-height:56px}
-.menu button.on{border-color:var(--brand);background:var(--soft)}
-.menu button.need{border-color:var(--hot)}
-.menu .d{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--chip);display:grid;place-items:center;font-weight:900}
-.menu .t{display:flex;flex-direction:column;min-width:0}
-.menu .t b{font-size:14.5px}
-.menu .t span{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strip{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub);background:var(--chip);border-radius:12px;padding:7px 12px}
+.strip .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:0 0 auto}
+.strip.off{background:#FDECEA;color:#9B2C12}.strip.off .dot{background:#D93025}
+.done-msg{background:var(--soft);border:1.5px solid var(--brand);border-radius:14px;padding:12px 14px;font-size:14.5px;font-weight:700;text-align:center}
 .setup{background:var(--soft);border-radius:14px;padding:12px 14px;font-size:14px;display:flex;flex-direction:column;gap:6px}
-.setup ol{margin:0;padding-left:20px}
-.setup li.done{color:var(--sub);text-decoration:line-through}
+.setup ol{margin:0;padding-left:20px}.setup li.done{color:var(--sub);text-decoration:line-through}
+.sos{font-size:12px;color:var(--sub);text-align:center;margin:0}
 .foot{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;font-size:13px}
 .foot a,.foot button{color:var(--sub);background:none;border:0;font:inherit;text-decoration:underline;cursor:pointer;padding:6px 2px}
-.steps{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
-.steps b{font-size:14px}
-.steps ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
-.steps li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.45}
-.steps li i{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-style:normal;font-weight:900;font-size:13px;margin-top:1px}
-.steps .pic{border-radius:12px;background:var(--chip);padding:8px}
-.steps .pic svg{width:100%;height:auto;display:block}
-.done-msg{background:var(--soft);border:1.5px solid var(--brand);border-radius:14px;padding:12px 14px;font-size:14.5px;font-weight:700;text-align:center}
-@keyframes wfblink{0%,100%{stroke:var(--hot);stroke-width:6}50%{stroke:var(--hole-ring);stroke-width:2.5}}
-.blink{animation:wfblink 1.1s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){.blink{animation:none;stroke:var(--hot);stroke-width:5}}
 .trybar{background:var(--chip);border-radius:12px;padding:8px 12px;font-size:12.5px;color:var(--sub);text-align:center}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
 <div class="wf">
   <div class="wf-top"></div>
   <div id="trybar" class="trybar" hidden></div>
-
-  <div class="dialwrap" id="dw">
-    <svg id="svg" viewBox="0 0 360 360" role="img" aria-label="와파 다이얼"></svg>
-    <div class="ctext" id="ct"></div>
-  </div>
+  <div class="strip" id="strip"><span class="dot"></span><span id="stripTx"></span></div>
   <div class="done-msg" id="doneMsg" hidden></div>
-  <p class="hint" id="hint"></p>
-  <div class="steps" id="steps" hidden></div>
-  <div class="go" id="go" hidden><button class="btn ghost" id="bInfo" type="button"></button><button class="btn" id="bOpen" type="button"></button></div>
-
+  <div id="dial"></div>
   <div class="setup" id="setup" hidden></div>
-  <div class="menu" id="menu"></div>
-
+  <p class="sos" id="sos"></p>
   <div class="foot">
     <a href="wafa_start.html?home=1" id="fAll"></a>
-    <button type="button" id="fSound"></button>
-    <button type="button" id="fVoice"></button>
     <button type="button" id="fClassic"></button>
   </div>
 </div>
@@ -95,246 +54,115 @@
   try { if (/[?&]try=1/.test(location.search)) { localStorage.setItem('wafa_home_mode', 'dial'); history.replaceState(null, '', 'wafa_home_dial.html'); } } catch (e) {}
 
   WF.header(null, null);
+
+  /* 인터넷 연결 (예전 첫 화면과 같은 문구) */
+  function net(){ var on = navigator.onLine !== false; document.getElementById('strip').classList.toggle('off', !on);
+    document.getElementById('stripTx').textContent = on ? T('인터넷 연결됨 · 전화를 걸고 받을 수 있어요', 'Online · you can call and answer')
+                                                       : T('인터넷이 끊겼어요 · 와이파이나 핫스팟을 켜 주세요', 'No internet · turn on Wi-Fi or a hotspot'); }
+  window.addEventListener('online', net); window.addEventListener('offline', net); net();
+  document.getElementById('sos').textContent = T('와파 번호로는 112 · 119 같은 긴급전화가 걸리지 않습니다. 휴대폰 기본 전화로 거세요.', 'WAFA numbers cannot reach 112 · 119. Use your phone’s own dialer.');
+
+  /* 로그인 — 앱이 막 깨어날 때 저장소에서 꺼내는 데 잠깐 걸려서 2초 동안 다시 물어봄(AL.requireLogin 과 같은 까닭) */
   var sess = (await AL.sb.auth.getSession()).data.session;
+  for (var i = 0; !sess && i < 8; i++) { await new Promise(function(r){ setTimeout(r, 250); }); sess = (await AL.sb.auth.getSession()).data.session; }
   if (!sess) { location.replace('wafa_start.html'); return; }
   var me = null;
   try { me = await WF.me(); } catch (e) {}
-  if (me && !me.setup) { location.replace('wafa_start.html'); return; }
+  if (me && me.setup === false) { location.replace('wafa_start.html'); return; }
 
   var hasNum = !!(me && me.numbers && me.numbers.length);
   var s = me && me.sub;
   var hasPlan = !!(s && s.status !== 'expired' && s.status !== 'refunded' && new Date(s.until) > new Date());
+  var NEXT = !hasNum ? '4' : !hasPlan ? '7' : null;
 
-  /* ── 번호마다 하는 일 (초안 · 기획에서 바꾸기 쉽게 한곳에) ── */
-  var ITEMS = {
-    '1': { ico:'☎️', t:T('전화 걸기', 'Call'), d:T('번호를 눌러 음성 · 영상 · 문자', 'Dial a number — voice, video, text'), url:'wafa_dial.html#pad',
-           info:T('와파 번호나 일반 번호를 눌러 전화합니다. 와이파이가 없어도 데이터로 걸리고, 해외에서도 와파끼리는 로밍 없이 통화됩니다.', 'Call any WAFA or regular number. Works on mobile data without Wi-Fi, and WAFA-to-WAFA calls need no roaming abroad.') },
-    '2': { ico:'🕘', t:T('최근 기록', 'Recents'), d:T('걸고 받은 전화 · 문자', 'Calls and messages'), url:'wafa_dial.html#recent',
-           info:T('최근에 걸고 받은 전화와 문자를 봅니다. 누르면 바로 다시 겁니다.', 'See recent calls and messages. Tap one to call back.') },
-    '3': { ico:'👥', t:T('연락처', 'Contacts'), d:T('저장한 사람 · 단축번호', 'Saved people, speed dial'), url:'wafa_dial.html#contacts',
-           info:T('저장한 연락처를 보고, 자주 거는 분은 단축번호로 둡니다.', 'Your saved contacts and speed-dial numbers.') },
-    '4': { ico:'🔢', t:T('내 와파 번호', 'My number'), d:hasNum ? T('번호 보기 · 바꾸기 · 좋은 번호', 'View, change, premium numbers') : T('처음이면 여기서 번호 받기', 'Get your number here first'), url:'wafa_number.html',
-           info:T('와파 전화번호를 받거나 바꿉니다. 유심 · 통신사 가입이 없어도 이 번호로 전화를 걸고 받습니다.', 'Get or change your WAFA number. No SIM or carrier plan needed to call and receive.'), need:!hasNum },
-    '5': { ico:'💬', t:T('별칭 전화', 'Alias calls'), d:T('번호 대신 별칭으로 연결', 'Connect by alias, not number'), url:'alias_contacts.html', pl:true,
-           info:T('내 번호를 알려 주지 않고 별칭(닉네임)으로 통화 · 대화합니다.', 'Talk and call by nickname without sharing your number.') },
-    '6': { ico:'📲', t:T('통화 설정', 'Call settings'), d:T('벨 · 착신전환 · 음성사서함', 'Ring, forwarding, voicemail'), url:'wafa_callset.html',
-           info:T('벨소리, 다른 번호로 돌려받기(착신전환), 음성사서함을 정합니다.', 'Set ringtone, call forwarding and voicemail.') },
-    '7': { ico:'💳', t:T('이용권', 'Plan'), d:hasPlan ? WF.subLine(me) : T('구독하고 무제한으로', 'Subscribe for full use'), url:'wafa_plan.html',
-           info:T('와파 이용권(구독)과 보충권을 봅니다. 해지 · 변경도 여기서 합니다.', 'Your subscription and add-ons. Change or cancel here.'), need:hasNum && !hasPlan },
-    '8': { ico:'📊', t:T('사용량', 'Usage'), d:T('이번 달 통화 · 문자 · 저장', 'This month: calls, texts, storage'), url:'wafa_usage.html',
-           info:T('이번 달에 쓴 통화 시간 · 문자 · 저장 공간을 봅니다.', 'Minutes, texts and storage used this month.') },
-    '9': { ico:'📘', t:T('사용법', 'How to use'), d:T('전체 기능 소개 · PDF', 'All features · PDF'), url:'features.html',
-           info:T('와파의 모든 기능을 차례로 봅니다. PDF로 내려받을 수도 있습니다.', 'A tour of every feature, with a PDF download.') },
-    '0': { ico:'🙋', t:T('고객센터', 'Help desk'), d:T('묻고 답 받기', 'Ask us anything'), url:'support.html',
-           info:T('궁금한 점이나 불편한 점을 남기면 답을 드립니다. (옛날 전화의 0번 = 교환원)', 'Leave a question and we will reply. (0 = operator, like old phones)') }
-  };
-  var ORDER = ['1','2','3','4','5','6','7','8','9','0'];
-
-  /* ── 따라하기 3단계 (톡 누르면 보임) ── */
-  var STEPS = {
-    '1': [T('번호를 누르세요 (와파 번호 · 일반 번호 모두)', 'Enter a number (WAFA or regular)'), T('음성 · 영상 · 문자 중 하나를 누르세요', 'Tap voice, video or text'), T('끝나면 빨간 버튼으로 끊습니다', 'Tap the red button to hang up')],
-    '2': [T('최근 목록에서 사람을 고르세요', 'Pick someone from the list'), T('번호가 번호판에 바로 들어갑니다', 'Their number goes onto the keypad'), T('음성 · 영상 · 문자 중 하나를 누르세요', 'Tap voice, video or text')],
-    '3': [T('연락처에서 사람을 고르세요', 'Pick a contact'), T('번호가 번호판에 바로 들어갑니다', 'Their number goes onto the keypad'), T('자주 거는 분은 단축번호로 — 번호판에서 숫자를 꾸욱', 'Speed dial: press and hold a digit on the keypad')],
-    '4': [T('받고 싶은 번호를 고르세요 (보여 주는 번호 중 · 직접 찾기)', 'Choose a number (suggested or search)'), T('★ 좋은 번호는 따로 결제, 일반 번호는 이용권으로 받습니다', '★ Premium numbers are paid; regular ones come with a plan'), T('받는 즉시 그 번호로 걸고 받을 수 있어요', 'Call and receive on it right away')],
-    '5': [T('내 별칭(닉네임)을 정하세요', 'Set your nickname'), T('상대에게 별칭을 알려 주거나 연결을 요청하세요', 'Share it or send a connect request'), T('연결되면 번호 없이 전화 · 대화합니다', 'Once connected, call and chat without numbers')],
-    '6': [T('벨소리를 고르세요', 'Pick a ringtone'), T('못 받을 때 돌려받을 번호를 정하세요 (착신전환)', 'Set a number to forward to when you miss calls'), T('음성사서함을 켜 두면 메시지를 남겨 줍니다', 'Turn on voicemail to get messages')],
-    '7': [T('1 · 3 · 6 · 12개월 중 고르세요', 'Pick 1, 3, 6 or 12 months'), T('구글 · 애플 결제창에서 결제합니다', 'Pay in the Google / Apple sheet'), T('해지 · 변경은 이 화면 또는 스토어 구독 관리에서', 'Cancel or change here or in store subscriptions')],
-    '8': [T('이번 달 통화 시간 · 문자 · 저장을 봅니다', 'See this month\'s minutes, texts, storage'), T('모자라면 보충권으로 더합니다', 'Top up with an add-on if needed'), T('날짜별로 얼마나 썼는지 확인합니다', 'Check usage by day')],
-    '9': [T('기능을 차례로 넘겨 봅니다', 'Flip through each feature'), T('PDF로 내려받아 두고 볼 수 있어요', 'Download it as a PDF'), T('그래도 모르면 0번 고객센터', 'Still stuck? Dial 0')],
-    '0': [T('궁금한 점이나 불편한 점을 적으세요', 'Write your question'), T('보내기를 누르세요', 'Tap send'), T('답이 오면 알림으로 알려 드립니다', 'We will notify you when we reply')]
-  };
-  /* 착신전환은 그림 한 장으로 */
   var PIC6 = '<svg viewBox="0 0 320 70" role="img" aria-label="' + T('착신전환 그림', 'Forwarding diagram') + '">' +
     '<g font-family="system-ui" font-size="11" fill="currentColor" text-anchor="middle">' +
     '<rect x="6" y="18" width="62" height="34" rx="8" fill="none" stroke="currentColor"/><text x="37" y="39">' + T('거는 사람', 'Caller') + '</text>' +
-    '<line x1="70" y1="35" x2="118" y2="35" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>' +
+    '<line x1="70" y1="35" x2="116" y2="35" stroke="currentColor" stroke-width="2"/><path d="M116 31 L122 35 L116 39z" fill="currentColor"/>' +
     '<rect x="122" y="18" width="76" height="34" rx="8" fill="none" stroke="currentColor"/><text x="160" y="33">' + T('내 와파', 'My WAFA') + '</text><text x="160" y="46">' + T('(못 받음)', '(missed)') + '</text>' +
-    '<line x1="200" y1="35" x2="246" y2="35" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#ar)"/>' +
-    '<rect x="250" y="18" width="64" height="34" rx="8" fill="none" stroke="currentColor"/><text x="282" y="33">' + T('돌려받을', 'Forward') + '</text><text x="282" y="46">' + T('번호', 'number') + '</text></g>' +
-    '<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="currentColor"/></marker></defs></svg>';
+    '<line x1="200" y1="35" x2="244" y2="35" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"/><path d="M244 31 L250 35 L244 39z" fill="currentColor"/>' +
+    '<rect x="250" y="18" width="64" height="34" rx="8" fill="none" stroke="currentColor"/><text x="282" y="33">' + T('돌려받을', 'Forward') + '</text><text x="282" y="46">' + T('번호', 'number') + '</text></g></svg>';
 
-  /* ── 처음 설정 길안내 — 다음에 할 번호 ── */
-  var NEXT = !hasNum ? '4' : !hasPlan ? '7' : null;
+  /* ── 번호마다 하는 일 ── */
+  function items(badge2){ return {
+    '1': { ico:'☎️', t:T('전화 걸기', 'Call'), d:T('번호를 눌러 음성 · 영상 · 문자', 'Dial a number — voice, video, text'), url:'wafa_dial.html#pad',
+           info:T('와파 번호를 눌러 전화합니다. 와이파이가 없어도 데이터로 걸리고, 해외에서도 와파끼리는 로밍 없이 통화됩니다.', 'Call a WAFA number. Works on mobile data without Wi-Fi, and WAFA-to-WAFA calls need no roaming abroad.'),
+           steps:[T('와파 번호 10자리를 누르세요', 'Enter a 10-digit WAFA number'), T('음성 · 영상 · 문자 중 하나를 누르세요', 'Tap voice, video or text'), T('끝나면 빨간 버튼으로 끊습니다', 'Tap the red button to hang up')] },
+    '2': { ico:'🕘', t:T('최근 기록', 'Recents'), d:T('걸고 받은 전화 · 음성사서함', 'Calls and voicemail'), url:'wafa_dial.html#recent', badge:badge2,
+           info:T('걸고 받은 전화, 부재중 전화, 음성사서함을 봅니다.', 'Calls you made and got, missed calls and voicemail.'),
+           steps:[T('맨 위 📮 음성사서함은 ▶ 로 들어요', 'Play voicemail at the top with ▶'), T('기록에서 사람을 고르면 번호가 번호판에 들어갑니다', 'Pick a call to put the number on the keypad'), T('음성 · 영상 · 문자 중 하나를 누르세요', 'Tap voice, video or text')] },
+    '3': { ico:'👥', t:T('연락처', 'Contacts'), d:T('저장한 사람 · 단축번호', 'Saved people, speed dial'), url:'wafa_dial.html#contacts',
+           info:T('저장한 연락처를 보고, 자주 거는 분은 단축번호로 둡니다.', 'Your saved contacts and speed-dial numbers.'),
+           steps:[T('이름으로 찾거나 목록에서 고르세요', 'Search or pick a contact'), T('번호가 번호판에 바로 들어갑니다', 'Their number goes onto the keypad'), T('자주 거는 분은 번호판 숫자를 꾸욱 = 단축번호', 'Speed dial: press and hold a digit on the keypad')] },
+    '4': { ico:'🔢', t:T('내 와파 번호', 'My number'), d:hasNum ? T('번호 보기 · 바꾸기 · 좋은 번호', 'View, change, premium numbers') : T('처음이면 여기서 번호 받기', 'Get your number here first'), url:'wafa_number.html', need:!hasNum,
+           info:T('와파 전화번호를 받거나 바꿉니다. 유심 · 통신사 가입이 없어도 이 번호로 전화를 걸고 받습니다.', 'Get or change your WAFA number. No SIM or carrier plan needed.'),
+           steps:[T('받고 싶은 번호를 고르세요', 'Choose a number'), T('★ 좋은 번호는 따로 결제, 일반 번호는 이용권으로 받습니다', '★ Premium numbers are paid; regular ones come with a plan'), T('받는 즉시 그 번호로 걸고 받을 수 있어요', 'Call and receive on it right away')] },
+    '5': { ico:'💬', t:T('별칭 전화', 'Alias calls'), d:T('번호 대신 별칭으로 연결', 'Connect by alias, not number'),
+           go:function(){ try { sessionStorage.setItem('wafa_pl', String(Date.now())); } catch (e) {} location.href = 'alias_contacts.html'; },
+           info:T('내 번호를 알려 주지 않고 별칭(닉네임)으로 통화 · 대화합니다. 상대가 수락해야 이어집니다.', 'Talk by nickname without sharing your number. Connects after the other side accepts.'),
+           steps:[T('내 별칭(닉네임)을 정하세요', 'Set your nickname'), T('상대에게 초대를 보내거나 연결을 요청하세요', 'Send an invite or a connect request'), T('수락되면 번호 없이 전화 · 대화합니다', 'Once accepted, call and chat without numbers')] },
+    '6': { ico:'📲', t:T('통화 설정', 'Call settings'), d:T('벨 · 착신전환 · 음성사서함', 'Ring, forwarding, voicemail'), url:'wafa_callset.html', pic:PIC6,
+           info:T('벨소리, 다른 번호로 돌려받기(착신전환), 음성사서함을 정합니다.', 'Set ringtone, call forwarding and voicemail.'),
+           steps:[T('벨소리를 고르세요', 'Pick a ringtone'), T('못 받을 때 돌려받을 번호를 정하세요 (착신전환)', 'Set a number to forward to when you miss calls'), T('음성사서함을 켜 두면 메시지를 남겨 줍니다', 'Turn on voicemail to get messages')] },
+    '7': { ico:'💳', t:T('이용권', 'Plan'), d:hasPlan ? WF.subLine(me) : T('구독하고 전화 걸기', 'Subscribe to make calls'), url:'wafa_plan.html', need:hasNum && !hasPlan,
+           info:T('전화 걸기는 이용권(구독)이 있어야 합니다. 문자는 무료예요. 보충권 · 해지 · 변경도 여기서.', 'Calling needs a plan; texting is free. Add-ons, change or cancel here.'),
+           steps:[T('1 · 3 · 6 · 12개월 중 고르세요', 'Pick 1, 3, 6 or 12 months'), T('구글 · 애플 결제창에서 결제합니다', 'Pay in the Google / Apple sheet'), T('해지 · 변경은 이 화면 또는 스토어 구독 관리에서', 'Cancel or change here or in store subscriptions')] },
+    '8': { ico:'📊', t:T('사용량', 'Usage'), d:T('이번 달 통화 · 문자 · 저장', 'This month: calls, texts, storage'), url:'wafa_usage.html',
+           info:T('이번 달에 쓴 통화 시간 · 문자 · 저장 공간을 봅니다.', 'Minutes, texts and storage used this month.'),
+           steps:[T('이번 달 통화 시간 · 문자 · 저장을 봅니다', 'See this month\'s minutes, texts, storage'), T('모자라면 보충권으로 더합니다', 'Top up with an add-on if needed'), T('날짜별로 얼마나 썼는지 확인합니다', 'Check usage by day')] },
+    '9': { ico:'📘', t:T('사용법', 'How to use'), d:T('전체 기능 소개 · PDF', 'All features · PDF'), url:'features.html',
+           info:T('와파의 모든 기능을 차례로 봅니다. PDF로 내려받을 수도 있습니다.', 'A tour of every feature, with a PDF download.'),
+           steps:[T('기능을 차례로 넘겨 봅니다', 'Flip through each feature'), T('PDF로 내려받아 두고 볼 수 있어요', 'Download it as a PDF'), T('그래도 모르면 0번 고객센터', 'Still stuck? Dial 0')] },
+    '0': { ico:'🙋', t:T('고객센터', 'Help desk'), d:T('묻고 답 받기', 'Ask us anything'), url:'support.html',
+           info:T('궁금한 점이나 불편한 점을 남기면 답을 드립니다. (옛날 전화의 0번 = 교환원)', 'Leave a question and we will reply. (0 = operator, like old phones)'),
+           steps:[T('궁금한 점이나 불편한 점을 적으세요', 'Write your question'), T('보내기를 누르세요', 'Tap send'), T('답이 오면 알림으로 알려 드립니다', 'We will notify you when we reply')] }
+  }; }
+  function hintText(){ return !hasNum ? T('처음이세요? 4번을 돌려 와파 번호부터 받으세요', 'New here? Dial 4 to get your WAFA number')
+    : !hasPlan ? T('7번을 돌리면 이용권을 고를 수 있어요 (문자는 무료)', 'Dial 7 to choose a plan (texting is free)')
+    : T('숫자를 톡 누르면 안내 · 멈춤쇠까지 돌리면 바로 실행', 'Tap a number for info · dial it to the stop to open'); }
 
-  /* ── 돌아왔을 때 「다 됐어요, 다음은」 ── */
+  var dh = DialHome.mount(document.getElementById('dial'), {
+    en: EN, key: 'wafa', brand: { plate: WF.isDark() ? '#1C8A82' : '#0F6E68', rim: '#0B524D', ring: '#0A4743', ink: '#FFFFFF' },
+    center: function(){ return { title: 'WAFA', sub: hasNum ? WF.shown(me.numbers[0].number) : T('번호 없음', 'No number yet') }; },
+    hint: hintText(), next: NEXT, items: items(0)
+  });
+
+  /* ── 새 음성사서함 · 부재중 → 2번 배지 (예전 첫 화면 [최근] 칸 배지와 같은 계산) ── */
+  (async function(){
+    var n = 0;
+    try {
+      var hid = []; try { hid = JSON.parse(localStorage.getItem('wafa_vm_hidden') || '[]'); } catch (e) {}
+      var vs = localStorage.getItem('wafa_vm_seen') || '', rs = localStorage.getItem('wafa_rc_seen') || '';
+      var v = await AL.sb.rpc('wafa_voicemails', { p_limit: 30 });
+      n += ((v && !v.error && v.data) || []).filter(function(x){ return hid.indexOf(x.id) < 0 && x.at > vs; }).length;
+      var c = await AL.sb.rpc('my_calls', { p_limit: 60 });
+      n += ((c && !c.error && c.data) || []).filter(function(r){ return !r.outgoing && (r.ended_reason === 'no_answer' || r.ended_reason === 'missed') && r.created_at > rs; }).length;
+    } catch (e) {}
+    if (n) dh.update({ items: items(n) });
+  })();
+
+  /* ── 처음 설정 · 다 하고 돌아왔을 때 ── */
+  if (!hasNum || !hasPlan) {
+    var st = document.getElementById('setup'); st.hidden = false; dh.mid.appendChild(st);   // 번호 목록 위에
+    st.innerHTML = '<b>' + WF.esc(T('처음 설정 — 다이얼로 차례대로', 'First-time setup — dial in order')) + '</b><ol>' +
+      '<li class="done">' + WF.esc(T('가입 · 로그인', 'Sign up / log in')) + '</li>' +
+      '<li class="' + (hasNum ? 'done' : '') + '">' + WF.esc(T('4번 — 내 와파 번호 받기', '4 — Get your WAFA number')) + '</li>' +
+      '<li class="' + (hasPlan ? 'done' : '') + '">' + WF.esc(T('7번 — 이용권 고르기 (전화 걸기용 · 문자는 무료)', '7 — Choose a plan (for calls · texts are free)')) + '</li>' +
+      '<li>' + WF.esc(T('6번 — 벨 · 착신전환 정하기 (선택)', '6 — Ring & forwarding (optional)')) + '</li></ol>';
+  }
   try {
-    var prev = JSON.parse(sessionStorage.getItem('wafa_dh_state') || 'null');
-    var dm = document.getElementById('doneMsg');
+    var prev = JSON.parse(sessionStorage.getItem('wafa_dh_state') || 'null'), dm = document.getElementById('doneMsg');
     if (prev && !prev.n && hasNum) { dm.hidden = false; dm.textContent = T('✓ 번호 받기 완료! ', '✓ Number ready! ') + (NEXT === '7' ? T('다음은 7번 — 이용권 고르기', 'Next: dial 7 to choose a plan') : T('이제 1번으로 전화를 걸어 보세요', 'Now dial 1 to make a call')); }
     else if (prev && !prev.p && hasPlan) { dm.hidden = false; dm.textContent = T('✓ 이용권 준비 완료! 이제 1번으로 전화를 걸어 보세요', '✓ Plan ready! Now dial 1 to make a call'); }
     sessionStorage.setItem('wafa_dh_state', JSON.stringify({ n: hasNum, p: hasPlan }));
   } catch (e) {}
 
-  /* ── 목소리 안내 (폰이 읽어 줌 · 켜고 끄기) ── */
-  var VK = 'wafa_home_dial_voice', voiceOn = false; try { voiceOn = localStorage.getItem(VK) === 'on'; } catch (e) {}
-  function say(text){
-    if (!voiceOn || !('speechSynthesis' in window)) return;
-    try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(text); u.lang = EN ? 'en-US' : 'ko-KR'; u.rate = EN ? 1 : 0.95; speechSynthesis.speak(u); } catch (e) {}
-  }
-  var KO_NUM = { '1':'일','2':'이','3':'삼','4':'사','5':'오','6':'육','7':'칠','8':'팔','9':'구','0':'영' };
-
-  /* ── 다이얼 그리기 ── */
-  var CX = 180, CY = 180, RR = 120, HR = 24, R_OUT = 158, R_IN = 70;
-  var A1 = -32, STEP = 28.5, STOP_A = 38;           // 각도: 3시 방향 0°, 시계 방향 +
-  function angOf(i){ return A1 - i * STEP; }          // i = 0..9 (1..0)
-  function maxRot(i){ return STOP_A - angOf(i); }      // 그 구멍을 멈춤쇠까지 돌리는 양(도)
-  function pt(a, r){ var t = a * Math.PI / 180; return [CX + r * Math.cos(t), CY + r * Math.sin(t)]; }
-  function circlePath(x, y, r){ return 'M' + (x - r) + ' ' + y + 'a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0Z'; }
-  var NS = 'http://www.w3.org/2000/svg';
-  var svg = document.getElementById('svg');
-  function el(tag, attrs, parent){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; }
-
-  // 받침(숫자가 적힌 판 — 돌지 않음)
-  el('circle', { cx:CX, cy:CY, r:R_OUT + 14, fill:'var(--base)', stroke:'var(--base-line)', 'stroke-width':2 });
-  var labels = {};
-  ORDER.forEach(function(k, i){
-    var p = pt(angOf(i), RR), it = ITEMS[k];
-    var g = el('g', {});
-    el('text', { x:p[0], y:p[1] - 3, 'text-anchor':'middle', class:'num' }, g).textContent = k;
-    el('text', { x:p[0], y:p[1] + 15, 'text-anchor':'middle', class:'ico' }, g).textContent = it.ico;
-    labels[k] = g;
-  });
-  // 도는 판(구멍 뚫린 원판)
-  var plate = el('g', { id:'plate' });
-  var d = circlePath(CX, CY, R_OUT) + circlePath(CX, CY, R_IN);
-  ORDER.forEach(function(k, i){ var p = pt(angOf(i), RR); d += circlePath(p[0], p[1], HR); });
-  el('path', { d:d, 'fill-rule':'evenodd', fill:'var(--plate)', stroke:'var(--plate-rim)', 'stroke-width':2 }, plate);
-  var rings = {};
-  ORDER.forEach(function(k, i){ var p = pt(angOf(i), RR);
-    rings[k] = el('circle', { cx:p[0], cy:p[1], r:HR, fill:'transparent', stroke:'var(--hole-ring)', 'stroke-width':2.5, class:'hole', 'data-k':k }, plate); });
-  // 가운데 판
-  el('circle', { cx:CX, cy:CY, r:R_IN - 3, fill:'var(--center)', stroke:'var(--plate-rim)', 'stroke-width':2 });
-  // 멈춤쇠
-  var sp1 = pt(STOP_A + 12, R_OUT - 6), sp2 = pt(STOP_A + 12, R_OUT + 16);
-  el('line', { x1:sp1[0], y1:sp1[1], x2:sp2[0], y2:sp2[1], stroke:'var(--stop)', 'stroke-width':9, 'stroke-linecap':'round' });
-  // 꼭 할 일 표시(!)
-  var needDots = {};
-  ORDER.forEach(function(k, i){ if (!ITEMS[k].need) return; var p = pt(angOf(i) - 13, RR + 30);
-    var g = el('g', {}); el('circle', { cx:p[0], cy:p[1], r:9, fill:'var(--hot)' }, g);
-    el('text', { x:p[0], y:p[1] + 4.5, 'text-anchor':'middle', style:'font:900 13px system-ui;fill:var(--hot-ink)' }, g).textContent = '!';
-    needDots[k] = g; });
-
-  /* ── 소리 (파일 없이) ── */
-  var SK = 'wafa_home_dial_sound', soundOn = true; try { soundOn = localStorage.getItem(SK) !== 'off'; } catch (e) {}
-  var ac = null;
-  function actx(){ if (!soundOn) return null; if (!ac) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return null; try { ac = new C(); } catch (e) { return null; } }
-    if (ac.state === 'suspended') { try { ac.resume(); } catch (e) {} } return ac; }
-  function tick(vol, f){ var c = actx(); if (!c) return; var t = c.currentTime, o = c.createOscillator(), g = c.createGain();
-    o.type = 'square'; o.frequency.value = f || 1800; o.connect(g); g.connect(c.destination);
-    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol || .12, t + .002); g.gain.exponentialRampToValueAtTime(.0001, t + .025); o.start(t); o.stop(t + .04); }
-  function buzz(ms){ try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
-
-  /* ── 고르기 · 실행 ── */
-  var sel = null;
-  var ct = document.getElementById('ct'), hint = document.getElementById('hint');
-  function center(){
-    if (!sel) {
-      var num = hasNum ? WF.shown(me.numbers[0].number) : '';
-      ct.innerHTML = '<b>WAFA</b>' + (num ? '<span>' + WF.esc(num) + '</span>' : '<span>' + WF.esc(T('번호 없음', 'No number yet')) + '</span>');
-      document.getElementById('steps').hidden = true;
-      hint.textContent = !hasNum ? T('처음이세요? 4번을 돌려 와파 번호부터 받으세요', 'New here? Dial 4 to get your WAFA number')
-                       : !hasPlan ? T('7번을 돌리면 이용권을 고를 수 있어요', 'Dial 7 to choose a plan')
-                       : T('숫자를 톡 누르면 안내 · 멈춤쇠까지 돌리면 바로 실행', 'Tap a number for info · dial it to the stop to open');
-      document.getElementById('go').hidden = true;
-    } else {
-      var it = ITEMS[sel];
-      ct.innerHTML = '<span class="k">' + sel + '</span><b>' + WF.esc(it.t) + '</b><span>' + WF.esc(it.d) + '</span>';
-      hint.textContent = it.info;
-      var stp = document.getElementById('steps'); stp.hidden = false;
-      stp.innerHTML = '<b>' + WF.esc(T(sel + '번 따라하기', 'Step by step — ' + sel)) + '</b><ol>' +
-        STEPS[sel].map(function(x, j){ return '<li><i>' + (j + 1) + '</i><span>' + WF.esc(x) + '</span></li>'; }).join('') + '</ol>' +
-        (sel === '6' ? '<div class="pic">' + PIC6 + '</div>' : '');
-      document.getElementById('go').hidden = false;
-      document.getElementById('bOpen').textContent = '▶ ' + T(sel + '번 열기', 'Open ' + sel);
-      document.getElementById('bInfo').textContent = T('✕ 닫기', '✕ Close');
-    }
-    ORDER.forEach(function(k){ rings[k].setAttribute('stroke', k === sel ? 'var(--hot)' : 'var(--hole-ring)'); rings[k].setAttribute('stroke-width', k === sel ? 5 : 2.5);
-      rings[k].classList.toggle('blink', !sel && k === NEXT); });
-    [].forEach.call(document.querySelectorAll('#menu button'), function(b){ b.classList.toggle('on', b.dataset.k === sel); });
-  }
-  function pick(k){ if (sel === k) { run(k); return; } sel = k; tick(.08, 1400); buzz(8); center();
-    var it = ITEMS[k]; say((EN ? k : KO_NUM[k] + '번') + ', ' + it.t + '. ' + STEPS[k].join('. ')); }
-  function run(k){
-    var it = ITEMS[k]; if (!it) return;
-    try { sessionStorage.setItem('wafa_from_dialhome', '1'); if (it.pl) sessionStorage.setItem('wafa_pl', String(Date.now())); } catch (e) {}
-    location.href = it.url;
-  }
-  document.getElementById('bOpen').onclick = function(){ if (sel) run(sel); };
-  document.getElementById('bInfo').onclick = function(){ sel = null; center(); };
-
-  /* ── 아래 번호 목록(같은 동작) ── */
-  document.getElementById('menu').innerHTML = ORDER.map(function(k){ var it = ITEMS[k];
-    return '<button type="button" data-k="' + k + '" class="' + (it.need ? 'need' : '') + '"><span class="d">' + k + '</span><span class="t"><b>' + it.ico + ' ' + WF.esc(it.t) + '</b><span>' + WF.esc(it.d) + '</span></span></button>'; }).join('');
-  [].forEach.call(document.querySelectorAll('#menu button'), function(b){ b.onclick = function(){ pick(b.dataset.k); scrollTo({ top: 0, behavior: 'smooth' }); }; });
-
-  /* ── 처음 설정 안내 ── */
-  if (!hasNum || !hasPlan) {
-    var st = document.getElementById('setup'); st.hidden = false;
-    st.innerHTML = '<b>' + WF.esc(T('처음 설정 — 다이얼로 차례대로', 'First-time setup — dial in order')) + '</b><ol>' +
-      '<li class="done">' + WF.esc(T('가입 · 로그인', 'Sign up / log in')) + '</li>' +
-      '<li class="' + (hasNum ? 'done' : '') + '">' + WF.esc(T('4번 — 내 와파 번호 받기', '4 — Get your WAFA number')) + '</li>' +
-      '<li class="' + (hasPlan ? 'done' : '') + '">' + WF.esc(T('7번 — 이용권 고르기', '7 — Choose a plan')) + '</li>' +
-      '<li>' + WF.esc(T('6번 — 벨 · 착신전환 정하기 (선택)', '6 — Ring & forwarding (optional)')) + '</li></ol>';
-  }
-
-  /* ── 돌리기 ── */
-  var drag = null;
-  function pAng(e){ var r = svg.getBoundingClientRect(); var x = (e.clientX - r.left) / r.width * 360 - CX, y = (e.clientY - r.top) / r.height * 360 - CY;
-    return { a: Math.atan2(y, x) * 180 / Math.PI, d: Math.sqrt(x * x + y * y) }; }
-  function setRot(deg){ plate.style.transform = 'rotate(' + deg + 'deg)'; }
-  svg.addEventListener('pointerdown', function(e){
-    var p = pAng(e), best = null, bd = 1e9;
-    ORDER.forEach(function(k, i){ var h = pt(angOf(i), RR), r = svg.getBoundingClientRect();
-      var x = (e.clientX - r.left) / r.width * 360, y = (e.clientY - r.top) / r.height * 360, dd = Math.hypot(x - h[0], y - h[1]);
-      if (dd < bd) { bd = dd; best = i; } });
-    if (best === null || bd > HR + 10 || drag && drag.back) return;
-    e.preventDefault(); actx();
-    drag = { i: best, k: ORDER[best], start: p.a, last: p.a, rot: 0, ticks: 0, id: e.pointerId, t: Date.now() };
-    try { svg.setPointerCapture(e.pointerId); } catch (er) {}
-  });
-  svg.addEventListener('pointermove', function(e){
-    if (!drag || drag.back || e.pointerId !== drag.id) return;
-    var p = pAng(e), dA = p.a - drag.last; if (dA > 180) dA -= 360; if (dA < -180) dA += 360;
-    drag.last = p.a; drag.rot = Math.max(0, Math.min(maxRot(drag.i), drag.rot + dA)); setRot(drag.rot);
-    var tk = Math.floor(drag.rot / 9); if (tk > drag.ticks) { tick(.05, 2600); drag.ticks = tk; } else if (tk < drag.ticks) drag.ticks = tk;
-    if (drag.rot >= maxRot(drag.i) - 1 && !drag.hit) { drag.hit = true; tick(.18, 900); buzz(15); }
-  });
-  function release(e){
-    if (!drag || drag.back || (e && e.pointerId !== drag.id)) return;
-    var g = drag, full = g.rot >= maxRot(g.i) - 6;
-    if (g.rot < 6) { drag = null; setRot(0); pick(g.k); return; }          // 거의 안 돌렸으면 = 톡
-    g.back = true;
-    var from = g.rot, n = (g.k === '0' ? 10 : +g.k), t0 = performance.now(), dur = Math.max(260, from * 3.2), clicked = 0;
-    (function step(now){
-      var f = Math.min(1, (now - t0) / dur), r = from * (1 - f); setRot(r);
-      if (full) { var want = Math.floor(f * n); while (clicked < want) { clicked++; tick(.14, 1500); } }
-      if (f < 1) requestAnimationFrame(step);
-      else { setRot(0); drag = null; if (full) { sel = g.k; center(); setTimeout(function(){ run(g.k); }, 180); } }
-    })(t0);
-  }
-  svg.addEventListener('pointerup', release);
-  svg.addEventListener('pointercancel', release);
-  svg.addEventListener('keydown', function(e){ if (/^[0-9]$/.test(e.key)) pick(e.key); if (e.key === 'Enter' && sel) run(sel); });
-  svg.setAttribute('tabindex', '0');
-
   /* ── 아래 줄 ── */
-  document.getElementById('fAll').textContent = T('⚙ 전체 메뉴', '⚙ All menus');
-  var fs = document.getElementById('fSound');
-  function paintSound(){ fs.textContent = soundOn ? T('🔊 다이얼 소리 켬', '🔊 Dial sound on') : T('🔇 다이얼 소리 끔', '🔇 Dial sound off'); }
-  fs.onclick = function(){ soundOn = !soundOn; try { localStorage.setItem(SK, soundOn ? 'on' : 'off'); } catch (e) {} paintSound(); };
-  paintSound();
-  var fv = document.getElementById('fVoice');
-  if (!('speechSynthesis' in window)) fv.hidden = true;
-  function paintVoice(){ fv.textContent = voiceOn ? T('🗣 목소리 안내 켬', '🗣 Voice guide on') : T('🗣 목소리 안내 끔', '🗣 Voice guide off'); }
-  fv.onclick = function(){ voiceOn = !voiceOn; try { localStorage.setItem(VK, voiceOn ? 'on' : 'off'); } catch (e) {} paintVoice();
-    if (voiceOn) say(T('목소리 안내를 켰습니다. 숫자를 누르면 읽어 드립니다.', 'Voice guide on. Tap a number and I will read it.')); else try { speechSynthesis.cancel(); } catch (e) {} };
-  paintVoice();
-  document.getElementById('fClassic').textContent = T('↩ 원래 첫 화면으로', '↩ Back to classic home');
+  document.getElementById('fAll').textContent = T('⚙ 전체 메뉴 · 로그아웃', '⚙ All menus · Log out');
+  document.getElementById('fClassic').textContent = T('↩ 예전 첫 화면으로', '↩ Classic home');
   document.getElementById('fClassic').onclick = function(){ try { localStorage.setItem('wafa_home_mode', 'classic'); } catch (e) {} location.replace('wafa_dial.html'); };
   try { if (localStorage.getItem('wafa_home_mode') === 'dial' && (window.WAFA_HOME_ALL || 'classic') !== 'dial') {
     var tb = document.getElementById('trybar'); tb.hidden = false; tb.textContent = T('시험 중 — 이 폰만 다이얼 첫 화면입니다', 'Preview — dial home on this phone only'); } } catch (e) {}
-
-  center();
   WF.legal(document.querySelector('.wf'));
 })();
 </script>
