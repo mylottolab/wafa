@@ -66,7 +66,8 @@ html,body{height:100%}
 .acts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:330px;width:100%;margin:0 auto}
 .acts button{min-height:56px;border:0;border-radius:16px;font:inherit;font-weight:800;font-size:16px;cursor:pointer;color:#fff;white-space:nowrap}
 .acts .v{background:var(--call)} .acts .vv{background:var(--video)} .acts .m{background:var(--text);color:var(--text-ink)}
-.msg{font-size:14px;text-align:center;color:var(--sub);min-height:20px;margin:0}
+.msg{font-size:14px;text-align:center;color:var(--sub);margin:0 0 8px;padding:8px 10px;border-radius:12px;background:var(--soft);line-height:1.5}
+.msg.bad{background:rgba(242,201,76,.16);font-weight:700}
 .msg.bad{color:var(--warn)} .msg a{color:var(--brand);font-weight:800}
 .emgbtn{display:block;text-align:center;background:var(--warn);color:#fff;border-radius:14px;padding:12px;font-weight:800;text-decoration:none}
 .sos{font-size:12.5px;color:var(--sub);text-align:center;margin:4px 0 0}
@@ -146,6 +147,7 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
     <section class="page px">
       <div class="panel" id="panel">
         <div id="padBar"></div>
+        <p class="msg" id="msg" role="status" aria-live="polite" hidden></p>   <!-- 🔴 2026-11-23 안내는 번호 바로 위 — 아래에 두면 스크롤해야 보였음 -->
         <div class="disp"><span class="no" id="no">&nbsp;</span><button type="button" class="del" id="del" aria-label="delete">⌫</button></div>
         <div class="who" id="who"></div>
         <div id="keys" class="keys"></div>
@@ -155,7 +157,6 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
           <button type="button" class="vv" data-k="video"></button>
           <button type="button" class="m" data-k="chat"></button>
         </div>
-        <p class="msg" id="msg"></p>
       </div>
       <p class="sos" data-d="sos"></p>
     </section>
@@ -320,7 +321,8 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
     who.innerHTML = !digits ? WF.esc(d('sdHint')) : hit ? '<b>' + WF.esc(hit.name) + '</b>' : digits.length === 10 ? WF.esc(d('unknown')) : digits.length + ' / 10';
     msg('');
   }
-  function msg(t, bad, html){ var m = document.getElementById('msg'); m.className = 'msg' + (bad ? ' bad' : ''); if (html) m.innerHTML = html; else m.textContent = t; }
+  function msg(t, bad, html){ var m = document.getElementById('msg'); m.className = 'msg' + (bad ? ' bad' : ''); if (html) m.innerHTML = html; else m.textContent = t || ''; m.hidden = !(html || t);
+    if (!m.hidden) { try { var r = m.getBoundingClientRect(); if (r.top < 0 || r.top > innerHeight * .6) m.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} } }
 
   /* 걸기 — 서버(wafa_dial)가 번호 주인을 찾아 바로 이어 주고(link), 통화 · 대화 화면은 부름 것을 그대로 씁니다 */
   async function dial(kind, number, note){
