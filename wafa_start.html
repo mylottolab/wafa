@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="alias_common.js?v=20261122a"></script>
 <script src="wafa.js?v=20261121c"></script>
+<script src="wafa_home_mode.js?v=20261122a"></script>
 </head>
 <body>
 <!-- 와파 홈 (앱을 열면 처음 보이는 화면)
@@ -49,7 +50,8 @@
   }
 
   /* 🔴 2026-11-20 앱을 열면 바로 [번호판 · 연락처] 화면으로. 설정 · 타일 화면은 아래 메뉴 [설정](?home=1)에서 */
-  if (!/[?&]home=1/.test(location.search)) { location.replace('wafa_dial.html'); return; }
+  /* ☎ 2026-11-22 다이얼 첫 화면 시험 — wafa_home_mode.js 의 스위치(전체) 또는 이 폰의 선택에 따라. 기본은 지금 그대로(번호판) */
+  if (!/[?&]home=1/.test(location.search)) { location.replace(window.WAFA_HOME_URL || 'wafa_dial.html'); return; }
   var main = (me.prefs && me.prefs.main) || 'open';
   var num = (me.numbers || [])[0];
   var numCard = '<div class="card"><p class="muted">' + WF.t('myNumber') + '</p>' +

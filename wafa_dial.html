@@ -11,6 +11,7 @@
 <script src="alias_common.js?v=20261122a"></script>
 <script src="wafa.js?v=20261121c"></script>
 <script src="padstyle.js?v=20261119f"></script>
+<script src="wafa_home_mode.js?v=20261122a"></script>
 <script src="alias_media.js?v=20260927a"></script>
 <style>
 /* 와파 전화 — 앱을 열면 [번호판] [연락처] 두 화면이 바로 (2026-11-20)
@@ -401,6 +402,13 @@ html[lang=en] #padBar .ps-bar button{padding:6px 6px;font-size:11.5px}
   document.querySelector('.wf-lang').onclick = function(e){ var b = e.target.closest('[data-l]'); if (!b) return; try { localStorage.setItem('alias_lang_v1', b.dataset.l === 'en' ? 'en' : 'kr'); } catch (er) {} location.reload(); };
 
   paintText(); mark(0); net(); draw();
+  /* ☎ 2026-11-22 다이얼 첫 화면에서 왔을 때 — #recent · #contacts 로 그 칸을 바로 · 아래 [설정] 자리를 [☎ 다이얼 홈] 으로 */
+  (function(){
+    var h = location.hash, i = h === '#recent' ? 1 : h === '#contacts' ? 2 : -1;
+    if (i > 0) setTimeout(function(){ pages.scrollTo({ left: i * pages.clientWidth }); mark(i); }, 60);
+    if (window.WAFA_HOME === 'dial') { var a = document.querySelector('.bottom a[href="wafa_start.html?home=1"]');
+      if (a) { a.href = 'wafa_home_dial.html'; a.innerHTML = '<i>☎</i><span>' + (EN ? 'Dial home' : '다이얼 홈') + '</span>'; } }
+  })();
   WF.themeBtn(document.getElementById('themeHost'));
   WF.logoutBtn(document.getElementById('logoutHost'));
   document.querySelector('#getNum b').textContent = WF.t('getNumBtn');
