@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="alias_common.js?v=20261122a"></script>
 <script src="wafa.js?v=20261121c"></script>
-<script src="wafa_home_mode.js?v=20261122a"></script>
+<script src="wafa_home_mode.js?v=20261122b"></script>
 </head>
 <body>
 <!-- 와파 홈 (앱을 열면 처음 보이는 화면)
@@ -69,10 +69,17 @@
     '<a class="tile" href="wafa_usage.html"><span class="ic">📊</span><b>' + WF.t('usageN').replace('📊 ', '') + '</b><span>' + WF.t('usageD') + '</span></a>' +
     '<a class="tile" href="wafa_callset.html"><span class="ic">📲</span><b>' + (WF.en ? 'Call settings' : '통화 설정') + '</b><span>' + (WF.en ? 'Ring · Forwarding · Voicemail' : '벨 · 착신전환 · 음성사서함') + '</span></a>' +
     '<a class="tile" href="features.html"><span class="ic">📘</span><b>' + (WF.en ? 'All features' : '전체 기능 소개') + '</b><span>' + (WF.en ? 'View · PDF download' : '화면으로 보기 · PDF 내려받기') + '</span></a>' +
+    '<button class="tile" id="fs"><span class="ic">☎️</span><b>' + (WF.en ? 'On open' : '앱을 열면') + '</b><span>' + (window.WAFA_HOME === 'dial' ? (WF.en ? 'Dial home ✓ · tap for keypad' : '☎ 다이얼 ✓ · 누르면 번호판부터') : (WF.en ? 'Keypad ✓ · tap for dial home' : '번호판 ✓ · 누르면 다이얼부터')) + '</span></button>' +
     '<button class="tile" id="sw"><span class="ic">🔁</span><b>' + WF.t('switchMain') + '</b><span>' + (main === 'open' ? WF.t('privN') : WF.t('openN')) + '</span></button>';
 
   V.innerHTML = numCard + '<div class="tiles" style="margin-top:14px">' + tiles + '</div>';
   var g = document.getElementById('getNum'); if (g) g.onclick = function(){ location.href = 'wafa_number.html'; };
+  /* ☎ 2026-11-22 앱을 열면 — 다이얼 첫 화면 / 본화면(번호판) 바로 (이 폰에만) */
+  document.getElementById('fs').onclick = function(){
+    var to = window.WAFA_HOME === 'dial' ? 'classic' : 'dial';
+    try { localStorage.setItem('wafa_home_mode', to); } catch (e) {}
+    location.replace(to === 'dial' ? 'wafa_home_dial.html' : 'wafa_dial.html');
+  };
   document.getElementById('sw').onclick = async function(){
     await WF.rpc('wafa_set_prefs', { p_main: main === 'open' ? 'private' : 'open' }); location.reload();
   };

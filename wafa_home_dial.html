@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="alias_common.js?v=20261122a"></script>
 <script src="wafa.js?v=20261121c"></script>
-<script src="dialhome.js?v=20261122b"></script>
+<script src="dialhome.js?v=20261122c"></script>
 <style>
 /* ☎ 와파 다이얼 첫 화면 (2026-11-22 채택) — 다이얼 모양 · 돌리기는 dialhome.js(와파 · 부름 · 누름 · 바로너 공용)
    예전 첫 화면(wafa_dial.html: 번호판 · 최근 · 연락처)이 하던 일을 여기서도:
@@ -40,7 +40,6 @@
   <p class="sos" id="sos"></p>
   <div class="foot">
     <a href="wafa_start.html?home=1" id="fAll"></a>
-    <button type="button" id="fClassic"></button>
   </div>
 </div>
 
@@ -124,7 +123,9 @@
   var dh = DialHome.mount(document.getElementById('dial'), {
     en: EN, key: 'wafa', brand: { plate: WF.isDark() ? '#1C8A82' : '#0F6E68', rim: '#0B524D', ring: '#0A4743', ink: '#FFFFFF' },
     center: function(){ return { title: 'WAFA', sub: hasNum ? WF.shown(me.numbers[0].number) : T('번호 없음', 'No number yet') }; },
-    hint: hintText(), next: NEXT, items: items(0)
+    hint: hintText(), next: NEXT, items: items(0),
+    centerTap: { label: T('톡 = 전화 걸기', 'Tap = Call'), go: function(){ location.href = 'wafa_dial.html#pad'; } },
+    firstScreen: function(){ try { localStorage.setItem('wafa_home_mode', 'classic'); } catch (e) {} location.replace('wafa_dial.html'); }
   });
 
   /* ── 새 음성사서함 · 부재중 → 2번 배지 (예전 첫 화면 [최근] 칸 배지와 같은 계산) ── */
@@ -159,13 +160,11 @@
 
   /* ── 아래 줄 ── */
   document.getElementById('fAll').textContent = T('⚙ 전체 메뉴 · 로그아웃', '⚙ All menus · Log out');
-  document.getElementById('fClassic').textContent = T('↩ 예전 첫 화면으로', '↩ Classic home');
-  document.getElementById('fClassic').onclick = function(){ try { localStorage.setItem('wafa_home_mode', 'classic'); } catch (e) {} location.replace('wafa_dial.html'); };
   try { if (localStorage.getItem('wafa_home_mode') === 'dial' && (window.WAFA_HOME_ALL || 'classic') !== 'dial') {
     var tb = document.getElementById('trybar'); tb.hidden = false; tb.textContent = T('시험 중 — 이 폰만 다이얼 첫 화면입니다', 'Preview — dial home on this phone only'); } } catch (e) {}
   WF.legal(document.querySelector('.wf'));
 })();
 </script>
-<script src="wafa_home_mode.js?v=20261122a"></script>
+<script src="wafa_home_mode.js?v=20261122b"></script>
 </body>
 </html>
