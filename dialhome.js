@@ -14,7 +14,7 @@
        hint: '숫자를 톡 …',                           // 아무것도 안 골랐을 때 아래 글
        next: '4',                                     // 깜빡일 번호(없으면 null)
        items: { '1': { ico:'☎️', t:'전화 걸기', d:'한 줄 설명', info:'설명', steps:['…','…','…'], pic:'<svg…>',
-                       need:false, badge:0, url:'page.html' | go:function(){} , blank:false }, … '0': {…} }
+                       need:false, badge:0, url:'page.html' | go:function(){} , blank:false, mico:'목록용 아이콘(선택)' }, … '0': {…} }
      });
      dh.update({ items:…, next:…, hint:… })   // 배지 · 할 일이 바뀌었을 때
    ===================================================================== */
@@ -173,7 +173,7 @@
     function drawMenu(){
       menu.innerHTML = ORDER.map(function(k){ var it = S.items[k] || {};
         return '<button type="button" data-k="' + k + '" class="' + (it.need ? 'need ' : '') + (it.blank ? 'blank' : '') + '"><span class="d">' + k + '</span>' +
-          '<span class="t"><b>' + esc((it.ico ? it.ico + ' ' : '') + (it.t || '')) + '</b><span>' + esc(it.d || '') + '</span></span>' +
+          '<span class="t"><b>' + esc(((it.mico != null ? it.mico : it.ico) ? (it.mico != null ? it.mico : it.ico) + ' ' : '') + (it.t || '')) + '</b><span>' + esc(it.d || '') + '</span></span>' +
           (it.badge ? '<span class="bd">' + (it.badge > 99 ? '99+' : it.badge) + '</span>' : '') + '</button>'; }).join('');
       [].forEach.call(menu.querySelectorAll('button'), function(b){ b.onclick = function(){ pick(b.dataset.k); try { root.scrollIntoView({ behavior:'smooth', block:'start' }); } catch (e) {} }; });
     }
